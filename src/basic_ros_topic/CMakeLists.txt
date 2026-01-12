@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  roslib
 )
 
 # 查找外部库
@@ -114,7 +115,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}_node
-  CATKIN_DEPENDS roscpp rospy std_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs roslib
   # 其他 ROS 依赖
 )
 

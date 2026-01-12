@@ -1,5 +1,6 @@
 # ROS 构建文件
 .catkin_tools/
+.catkin_workspace/
 build/
 devel/
 install/
