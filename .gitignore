@@ -1,0 +1,24 @@
+# ROS 构建文件
+.catkin_tools/
+build/
+devel/
+install/
+.log/
+
+# Python
+*.pyc
+__pycache__/
+
+# 系统文件
+.DS_Store
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# 其他
+*.bag
+*.bp
+*.urdf.xacro
