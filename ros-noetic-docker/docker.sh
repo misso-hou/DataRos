@@ -2,7 +2,7 @@
 NAME="ros-noetic-desktop-full"
 CONTAINER_NAME="ros_noetic_gui"
 TAG="test"
-HOST_PATH=$(dirname $(dirname $PWD))
+HOST_PATH=$(dirname $(dirname $(dirname $PWD)))
 echo $HOST_PATH
 
 #创建docker镜像
@@ -24,13 +24,14 @@ export PS1='\[\033[01;38;5;214m\]root@ROS:\W>\[\033[00m\] '
 EOF
 
     sudo docker run -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -e DISPLAY=unix$DISPLAY    \
-    -e QT_X11_NO_MITSHM=1      \
-    --rm -it --privileged      \
-    --name ${CONTAINER_NAME}   \
-    --net=host                 \
-    -v $HOST_PATH/:/home/workspace/HMS \
-    -v /tmp/docker_bashrc:/root/.bashrc \
+    -e DISPLAY=unix$DISPLAY                      \
+    -e QT_X11_NO_MITSHM=1                        \
+    --rm -it --privileged                        \
+    --env ROS_MASTER_URI=http://172.17.0.1:11311 \        #与宿主机ros建立链接
+    --name ${CONTAINER_NAME}                     \
+    --net=host                                   \
+    -v $HOST_PATH/:/home/workspace               \
+    -v /tmp/docker_bashrc:/root/.bashrc          \
     ${NAME}:${TAG} /bin/bash -c "
         # echo 'source /home/workspace/HMS/DataRos/devel/setup.bash' >> ~/.bashrc &&
         # cd /home/workspace/HMS/catkin_ws && 

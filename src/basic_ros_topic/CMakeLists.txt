@@ -132,6 +132,9 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${Python3_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
+  ${Protobuf_INCLUDE_DIRS}
+  /home/workspace/common_protobuf/build/latest
+  /home/workspace/common_protobuf/build/latest/plusai_common_proto
 )
 
 # 添加要构建的源代码文件
@@ -172,6 +175,8 @@ target_link_libraries(${PROJECT_NAME}_node
   matplotlibcpp17::matplotlibcpp17
   Eigen3::Eigen
   ${OpenCV_LIBS}
+  protobuf
+  /home/workspace/common_protobuf/build/latest/libplusai_common_proto.so  # 直接指定
 )
 
 #############

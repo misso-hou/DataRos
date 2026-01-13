@@ -12,6 +12,7 @@
 
 #include <matplotlibcpp17/pyplot.h>
 #include "basic_ros_topic/weighted_window_mode.h"
+#include "basic_ros_topic/ros_topic_parser.h"
 
 #include <algorithm>
 #include <vector>
@@ -291,45 +292,59 @@ float LowPassFilter02(const float& data,const float& alpha) {
  * 文件夹默认为csv文件不带后缀序号
  * csv文件内部默认只有一组数据
  */
-int main(int argc, char *argv[]) {
-  ros::init(argc, argv, "data_reader");
-  ros::NodeHandle nh;
+// int main(int argc, char *argv[]) {
+//   ros::init(argc, argv, "data_reader");
+//   ros::NodeHandle nh;
 
-  WeightedWindows windows(2000,400);
-  pybind11::scoped_interpreter guard{};
-  SetParam(argc, argv);
-  ExtractData();
-  Animator->InitializePlt();
-  for (int i = start_index_; i < data_length_;)  //数据行遍历
-  {
-    //键盘控制
-    if (!KeyboardCtrl(i)) break;
-    int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
-    auto data_row = data_mat_[i];
-    auto filter_torque01 = LowPassFilter01(data_row[1],0.05);
-    auto filter_torque02 = LowPassFilter02(data_row[1],0.1);
-    data_row.push_back(filter_torque01);
-    data_row.push_back(filter_torque02);
-    data_row[0]*=2;
-    auto mode = windows.getWeightedMode(filter_torque02,data_row[2],data_row[0]);
-    // cout << "debug 02: tick->" << i << "; mode:" << mode << endl;
-    data_row.push_back(mode);
-    Animator->SetData(data_row);
-    /*------动画显示-----*/
-    Animator->Monitor(600);
-    auto freq01 = windows.GetLongFreqency();
-    // Animator->BarPlot01(freq01);
-    auto freq02 = windows.GetShortFreqency();
-    Animator->BarPlot01(freq01,freq02);
-    int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
-    int64_t remaining_T = cycle_time_ - (end_time - start_time);
-    if (remaining_T > 0) {
-      this_thread::sleep_for(chrono::milliseconds(remaining_T));
-    }
-    if (!back_) i++;
-    erase_ = false;
-  }
-  return 0;
-  pybind11::finalize_interpreter();
+//   WeightedWindows windows(2000,400);
+//   pybind11::scoped_interpreter guard{};
+//   SetParam(argc, argv);
+//   ExtractData();
+//   Animator->InitializePlt();
+//   for (int i = start_index_; i < data_length_;)  //数据行遍历
+//   {
+//     //键盘控制
+//     if (!KeyboardCtrl(i)) break;
+//     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
+//     auto data_row = data_mat_[i];
+//     auto filter_torque01 = LowPassFilter01(data_row[1],0.05);
+//     auto filter_torque02 = LowPassFilter02(data_row[1],0.1);
+//     data_row.push_back(filter_torque01);
+//     data_row.push_back(filter_torque02);
+//     data_row[0]*=2;
+//     auto mode = windows.getWeightedMode(filter_torque02,data_row[2],data_row[0]);
+//     // cout << "debug 02: tick->" << i << "; mode:" << mode << endl;
+//     data_row.push_back(mode);
+//     Animator->SetData(data_row);
+//     /*------动画显示-----*/
+//     Animator->Monitor(600);
+//     auto freq01 = windows.GetLongFreqency();
+//     // Animator->BarPlot01(freq01);
+//     auto freq02 = windows.GetShortFreqency();
+//     Animator->BarPlot01(freq01,freq02);
+//     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
+//     int64_t remaining_T = cycle_time_ - (end_time - start_time);
+//     if (remaining_T > 0) {
+//       this_thread::sleep_for(chrono::milliseconds(remaining_T));
+//     }
+//     if (!back_) i++;
+//     erase_ = false;
+//   }
+//   return 0;
+//   pybind11::finalize_interpreter();
+// }
+
+
+int main(int argc, char** argv)
+{
+    // 初始化ROS节点
+    ros::init(argc, argv, "dbw_reports_listener");
+    
+    // 创建监听器对象
+    MsgParserTest msg_parser;
+    
+    // 进入ROS事件循环
+    ros::spin();
+    
+    return 0;
 }
-

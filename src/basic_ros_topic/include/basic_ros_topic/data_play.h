@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
+#include "basic_ros_topic/ros_topic_parser.h"
 
 
 using namespace std;
