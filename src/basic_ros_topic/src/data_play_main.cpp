@@ -245,7 +245,7 @@ void ExtractData() {
   std::string package_path = ros::package::getPath("basic_ros_topic");
 
   // 构建完整路径
-  std::string data_file = package_path + "/data/test_data01.csv";
+  std::string data_file = package_path + "/data/test_data.csv";
   
   std::cout << "包路径: " << package_path << std::endl;
   std::cout << "数据文件: " << data_file << std::endl;

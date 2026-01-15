@@ -12,7 +12,7 @@ build_docker() {
 
 #启动镜像
 run_docker() {
-    xhost +  #docker镜像可以使用可视化
+    xhost +local:root > /dev/null 2>&1
     # 创建临时.bashrc文件
     cat > /tmp/docker_bashrc << 'EOF'
 # 自定义PS1
@@ -26,8 +26,11 @@ EOF
     sudo docker run -v /tmp/.X11-unix:/tmp/.X11-unix \
     -e DISPLAY=unix$DISPLAY                      \
     -e QT_X11_NO_MITSHM=1                        \
+    -e LIBGL_ALWAYS_SOFTWARE=1                   \
+    -e GLX_FORCE_INDIRECT=1                      \
+    -e LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGL.so.1 \
     --rm -it --privileged                        \
-    --env ROS_MASTER_URI=http://172.17.0.1:11311 \        #与宿主机ros建立链接
+    --env ROS_MASTER_URI=http://172.17.0.1:11311 \
     --name ${CONTAINER_NAME}                     \
     --net=host                                   \
     -v $HOST_PATH/:/home/workspace               \

@@ -111,20 +111,8 @@ void Animation::SetSteerWheelData(const vector<float>& new_data) {
 void Animation::Monitor(int buffer_length) {
   static bool once_flag = true;
   /******动画频率设置******/
-  static float duration_time = 0.0f;
   static int64_t last_sim_time_stamp = 0;
-  int64_t current_time_stamp = TimeToolKit::TimeSpecSysCurrentMs();
-  // 时间控制
-  int record_time = current_time_stamp - last_sim_time_stamp;
-  if (record_time < DURATION && last_sim_time_stamp != 0) {
-    return;
-  }
-  if (last_sim_time_stamp == 0) {
-    duration_time = 0.0f;
-  } else {
-    duration_time += record_time / 1000.f;
-  }
-  last_sim_time_stamp = current_time_stamp;
+  if (FrequencyCtrl(DURATION, last_sim_time_stamp)) return;
   canvas_restore_region(data_figure_ptr_->unwrap(), data_background_);
   /******数据计算******/
   /*step01->实时数据更新*/
@@ -132,11 +120,10 @@ void Animation::Monitor(int buffer_length) {
   static float test_tick = 0;
   test_tick += 0.4;
   time_array.push_back(test_tick);
-  // time_array.push_back(duration_time*5);
-
   int data_num = steer_wheel_plt_data_.size();
   static mesh2D line_data(data_num);
   static vector<py::object> lines_artist(data_num);
+  static vector<py::object> legend_artist(3);
   for(uint i=0;i<data_num;i++){
     line_data[i].push_back(steer_wheel_plt_data_[i]);
   }
@@ -149,16 +136,20 @@ void Animation::Monitor(int buffer_length) {
   }
   /*step02->static artist生成*/
   static vector<string> colors = {"silver", "b","blueviolet","g" ,"cyan","gold","r"};
+  static vector<string> lables = {"SWA","SWT", "wheel_speed","yaw_rate","SWT_f1" ,"SWT_f2","bias_T"};
   if (once_flag) {
     once_flag = false;
     for (int i = 0; i < line_data.size(); i++) {
       if(i<2 || i>=4){
-        lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0)).unwrap().cast<py::list>()[0];
+        lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
+        legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
       }
       else if(i==2){
-        lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0)).unwrap().cast<py::list>()[0];
+        lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
+        legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
       }else if(i==3){
-        lines_artist[i] = data_axes03_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0)).unwrap().cast<py::list>()[0];
+        lines_artist[i] = data_axes03_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
+        legend_artist[2] = data_axes03_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
       }
     }
   }
@@ -171,9 +162,12 @@ void Animation::Monitor(int buffer_length) {
     else if(j==2){
       data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
     }else if(j==3){
-      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
+      data_axes03_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
     }
   }
+  data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
+  data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
+  data_axes03_ptr_->unwrap().attr("draw_artist")(legend_artist[2]);
   /******axis计算******/
   auto axes_xlim = data_axes01_ptr_->get_xlim();
   if (time_array.back() > get<1>(axes_xlim) - 10) {
@@ -185,73 +179,6 @@ void Animation::Monitor(int buffer_length) {
   }
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
-
-void Animation::SteerWheelTorqueMonitor() {
-  static bool once_flag = true;
-  /******动画频率设置******/
-  static int64_t last_sim_time_stamp = 0;
-  if (FrequencyCtrl(DURATION, last_sim_time_stamp)) return;
-  /*****图像元素绘制*****/
-  canvas_restore_region(data_figure_ptr_->unwrap(), data_background_);
-  /******数据计算******/
-  /*step01->实时数据更新*/
-  static vector<float> time_array;
-  static float test_tick = 0;
-  test_tick += 0.4;
-  time_array.push_back(test_tick);
-
-  int data_num = steer_wheel_plt_data_.size();
-  static mesh2D line_data(data_num);
-  static vector<py::object> lines_artist(data_num);
-  for(uint i=0;i<data_num;i++){
-    line_data[i].push_back(steer_wheel_plt_data_[i]);
-  }
-  // 数据更新
-  if (time_array.size() > DATA_BUFFER) {
-    time_array.erase(time_array.begin());
-    for(auto& line:line_data){
-      line.erase(line.begin());
-    }
-  }
-  /*step02->static artist生成*/
-  static vector<string> colors = {"silver", "b","blueviolet","g" ,"cyan","gold","r"};
-  if (once_flag) {
-    once_flag = false;
-    for (int i = 0; i < line_data.size(); i++) {
-      if(i<2 || i>=4){
-        lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0)).unwrap().cast<py::list>()[0];
-      }
-      else if(i==2){
-        lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0)).unwrap().cast<py::list>()[0];
-      }else if(i==3){
-        lines_artist[i] = data_axes03_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0)).unwrap().cast<py::list>()[0];
-      }
-    }
-  }
-  /*step03->artist实时数据更新并绘制*/
-  for (int j = 0; j < lines_artist.size(); j++) {
-    lines_artist[j].attr("set_data")(time_array, line_data[j]);
-    if(j<2 || j>=4){
-      data_axes01_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
-    }
-    else if(j==2){
-      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
-    }else if(j==3){
-      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
-    }
-  }
-  /******axis计算******/
-  auto axes_xlim = data_axes01_ptr_->get_xlim();
-  if (time_array.back() > get<1>(axes_xlim) - 10) {
-    float x_min = get<1>(axes_xlim) - 20.f;
-    float x_max = x_min + CMD_X_RANGE;
-    data_axes01_ptr_->set_xlim(Args(x_min, x_max));
-    data_axes02_ptr_->set_xlim(Args(x_min, x_max));
-    data_axes03_ptr_->set_xlim(Args(x_min, x_max));
-  }
-  canvas_update_flush_events(data_figure_ptr_->unwrap());
-}
-
 
 void Animation::BarPlot01(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02) {
   static bool once_flag = true;
