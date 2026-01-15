@@ -1,0 +1,105 @@
+#include <ros/ros.h>
+#include <ros/package.h>
+#include "basic_ros_topic/data_play.h"
+
+#include <sys/select.h>
+#include <termios.h>
+#include <thread>
+#include <unistd.h>
+
+#include "basic_ros_topic/animation.h"
+#include "tool_box/base_time_struct.h"
+
+#include <matplotlibcpp17/pyplot.h>
+#include "basic_ros_topic/weighted_window_mode.h"
+#include "tool_box/rate_controller.h"
+
+#include <algorithm>
+#include <vector>
+#include <iomanip>
+
+using namespace std;
+using namespace matplotlibcpp17;
+
+using namespace std;
+namespace Anim = modules::animation;
+Anim::Animation *Animator = Anim::Animation::GetInstance();
+
+float LowPassFilter01(const float& data,const float& alpha) {
+  static bool first_flag = true;
+  static float filtered_data = 0.0;
+
+  if (first_flag) {  // first time enter
+    first_flag = false;
+    filtered_data = data;
+  } else {
+    filtered_data = alpha * data + (1.0f - alpha) * filtered_data;
+  }
+  return filtered_data;
+}
+
+float LowPassFilter02(const float& data,const float& alpha) {
+  static bool first_flag = true;
+  static float filtered_data = 0.0;
+
+  if (first_flag) {  // first time enter
+    first_flag = false;
+    filtered_data = data;
+  } else {
+    filtered_data = alpha * data + (1.0f - alpha) * filtered_data;
+  }
+  return filtered_data;
+}
+
+/*
+ * ---------数据回放使用方法----------：
+ * 执行命令：./csvPlt+"播放速度设置“+”播放位置设置“+”csv文件夹序号“+”csv文件夹内部文件序号“
+ * 播放速度默认为1
+ * 播放位置默认从头开始
+ * 文件夹默认为csv文件不带后缀序号
+ * csv文件内部默认只有一组数据
+ */
+int main(int argc, char *argv[]) {
+  std::cout << "Main thread running..." << std::endl;
+  ros::init(argc, argv, "realtime_module");
+  ros::NodeHandle nh;
+  // 创建监听器对象
+  MsgParserTest msg_parser;
+  WeightedWindows windows(2000,400);
+  pybind11::scoped_interpreter guard{};
+  Animator->InitializePlt();
+  //主程序线程
+  ros::Rate rt(50);
+  while (ros::ok()) {
+    ros::spinOnce();
+    auto realtime_data = msg_parser.getVehicleData();
+    auto filter_torque01 = LowPassFilter01(realtime_data.steer_wheel_torque,0.05);
+    auto filter_torque02 = LowPassFilter02(realtime_data.steer_wheel_torque,0.1);
+    vector<float> data_row(4);
+    data_row[0] = realtime_data.steer_wheel_angle;
+    data_row[1] = realtime_data.steer_wheel_torque;
+    data_row[2] = realtime_data.wheel_speed;
+    data_row[3] = realtime_data.yaw_rate;
+    data_row.push_back(filter_torque01);
+    data_row.push_back(filter_torque02);
+    data_row[0]*=2;
+    auto mode = windows.getWeightedMode(filter_torque02,data_row[2],data_row[0]);
+    // cout << "debug 02: tick->" << i << "; mode:" << mode << endl;
+    data_row.push_back(mode);
+    Animator->SetSteerWheelData(data_row);
+    /*------动画显示-----*/
+    Animator->Monitor(600);
+    auto freq01 = windows.GetLongFreqency();
+    // Animator->BarPlot01(freq01);
+    auto freq02 = windows.GetShortFreqency();
+    Animator->BarPlot01(freq01,freq02);
+    rt.sleep();
+  }
+  pybind11::finalize_interpreter();
+  ROS_INFO("实时模块正常退出");
+  return 0;
+}
+
+
+
+

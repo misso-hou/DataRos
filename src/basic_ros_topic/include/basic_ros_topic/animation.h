@@ -31,13 +31,15 @@ class Animation : public utilities::Singleton<Animation> {
   ~Animation() {}
 
  public:
-  void SetData(const vector<float>& new_data);
+  void SetSteerWheelData(const vector<float>& new_data);
   void Monitor(int buffer_length);
+  void SteerWheelTorqueMonitor();
   void InitializePlt();
   void BarPlot01(const std::unordered_map<int, int>& frequency,const std::unordered_map<int, int>& frequency02);
   void BarPlot02(const std::unordered_map<int, int>& frequency);
 
  private:
+  bool FrequencyCtrl(int T, int64_t& last_time_stamp);
   void BarPltInit(const pybind11::dict& fig_kwargs); 
   void CmdPltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range);
 
@@ -62,7 +64,7 @@ class Animation : public utilities::Singleton<Animation> {
   py::object jet_cmap_;
 
   // data
-  vector<float> plt_data_;
+  vector<float> steer_wheel_plt_data_;
 
 };
 }  // namespace animation
