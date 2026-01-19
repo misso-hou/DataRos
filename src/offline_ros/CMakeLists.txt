@@ -61,8 +61,8 @@ file(GLOB SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 # --------------------数据播放器节点--------------------
 add_executable(data_player_node
   src/RosNode/data_play_main.cpp      
-  src/ros_topic_parser.cpp    
-  src/animation.cpp
+  src/function/ros_topic_parser.cpp    
+  src/function/animation.cpp
 )
 
 # ROS 与外部库的链接
@@ -74,8 +74,8 @@ target_link_libraries(data_player_node
 # --------------------实时运算节点--------------------
 add_executable(realtime_node
   src/RosNode/realtime_node.cpp      
-  src/ros_topic_parser.cpp    
-  src/animation.cpp
+  src/function/ros_topic_parser.cpp    
+  src/function/animation.cpp
 )
 
 # ROS 与外部库的链接
@@ -87,7 +87,7 @@ target_link_libraries(realtime_node
 # --------------------ROS监听器节点-------------------
 add_executable(ros_listener_node
   src/RosNode/ros_listener_node.cpp
-  src/ros_topic_parser.cpp
+  src/function/ros_topic_parser.cpp
 )
 
 target_link_libraries(ros_listener_node
