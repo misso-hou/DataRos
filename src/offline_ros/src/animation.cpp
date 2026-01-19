@@ -2,8 +2,7 @@
 
 #include <filesystem>
 #include <iostream>
-
-#include "function/weighted_window_mode.h"
+#include "algorithm/weighted_window_mode.h"
 
 namespace modules {
 namespace animation {
@@ -189,6 +188,7 @@ void Animation::Monitor(int buffer_length,const string& time) {
 }
 
 void Animation::BarPlot01(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02) {
+  using namespace ALG::WeightedWindows;
   static bool once_flag = true;
   canvas_restore_region(bar_figure_ptr_->unwrap(), bar_background_);
   /******数据计算******/

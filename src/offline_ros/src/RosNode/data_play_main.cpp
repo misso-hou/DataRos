@@ -11,7 +11,7 @@
 #include "tool_box/base_time_struct.h"
 
 #include <matplotlibcpp17/pyplot.h>
-#include "function/weighted_window_mode.h"
+#include "algorithm/weighted_window_mode.h"
 #include "function/ros_topic_parser.h"
 
 #include <algorithm>
@@ -23,6 +23,7 @@ using namespace matplotlibcpp17;
 
 using namespace std;
 namespace Anim = modules::animation;
+namespace AlgWW = ALG::WeightedWindows;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 
 enum class DataIndex{
@@ -327,7 +328,7 @@ string getLogTimestamp(const int index){
  * csv文件内部默认只有一组数据
  */
 int main(int argc, char *argv[]) {
-  WeightedWindows windows(2000,400);
+  AlgWW::WeightedWindows windows(2000,400);
   pybind11::scoped_interpreter guard{};
   SetParam(argc, argv);
   ExtractData();

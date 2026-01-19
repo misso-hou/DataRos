@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <algorithm>
 
+namespace ALG{
+namespace WeightedWindows{
 
 // 全局常量（可放在头文件中）
 const float RESOLUTION = 0.1;
@@ -174,3 +176,5 @@ inline float WeightedWindows::getWeightedMode(const float& torque,
     return offset_torque;
 }
 
+}
+}

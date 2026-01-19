@@ -11,7 +11,7 @@
 #include "tool_box/base_time_struct.h"
 
 #include <matplotlibcpp17/pyplot.h>
-#include "function/weighted_window_mode.h"
+#include "algorithm/weighted_window_mode.h"
 #include "tool_box/rate_controller.h"
 
 #include <algorithm>
@@ -23,6 +23,7 @@ using namespace matplotlibcpp17;
 
 using namespace std;
 namespace Anim = modules::animation;
+namespace AlgWW = ALG::WeightedWindows;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 
 float LowPassFilter01(const float& data,const float& alpha) {
@@ -65,7 +66,7 @@ int main(int argc, char *argv[]) {
   ros::NodeHandle nh;
   // 创建监听器对象
   MsgParserTest msg_parser;
-  WeightedWindows windows(2000,400);
+  AlgWW::WeightedWindows windows(2000,400);
   pybind11::scoped_interpreter guard{};
   Animator->InitializePlt();
   //主程序线程
