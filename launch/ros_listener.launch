@@ -1,6 +1,6 @@
 <!-- launch/ros_listener.launch -->
 <launch>
-    <node name="ros_listener" pkg="basic_ros_topic" 
+    <node name="ros_listener" pkg="offline_ros" 
           type="ros_listener_node" output="screen">
     </node>
 </launch>

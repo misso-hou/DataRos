@@ -1,6 +1,6 @@
 <!-- launch/data_player.launch -->
 <launch>
-    <node name="data_player" pkg="basic_ros_topic" 
+    <node name="data_player" pkg="offline_ros" 
           type="data_player_node" output="screen">
         <param name="cycle_time" value="10" />
         <param name="start_index" value="0" />

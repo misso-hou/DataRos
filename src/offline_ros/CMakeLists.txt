@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(basic_ros_topic)
+project(offline_ros)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -60,7 +60,7 @@ file(GLOB SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 # add_executable(${PROJECT_NAME}_node ${SRC_FILES})
 # --------------------数据播放器节点--------------------
 add_executable(data_player_node
-  src/data_play_main.cpp      
+  src/RosNode/data_play_main.cpp      
   src/ros_topic_parser.cpp    
   src/animation.cpp
 )
@@ -73,7 +73,7 @@ target_link_libraries(data_player_node
 
 # --------------------实时运算节点--------------------
 add_executable(realtime_node
-  src/realtime_main.cpp      
+  src/RosNode/realtime_node.cpp      
   src/ros_topic_parser.cpp    
   src/animation.cpp
 )
@@ -86,7 +86,7 @@ target_link_libraries(realtime_node
 
 # --------------------ROS监听器节点-------------------
 add_executable(ros_listener_node
-  src/ros_listener_main.cpp
+  src/RosNode/ros_listener_node.cpp
   src/ros_topic_parser.cpp
 )
 

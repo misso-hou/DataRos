@@ -1,9 +1,9 @@
-#include "basic_ros_topic/animation.h"
+#include "function/animation.h"
 
 #include <filesystem>
 #include <iostream>
 
-#include "basic_ros_topic/weighted_window_mode.h"
+#include "function/weighted_window_mode.h"
 
 namespace modules {
 namespace animation {

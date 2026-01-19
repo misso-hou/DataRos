@@ -1,18 +1,18 @@
 #include <ros/ros.h>
 #include <ros/package.h>
-#include "basic_ros_topic/data_play.h"
+#include "function/data_play.h"
 
 #include <sys/select.h>
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
 
-#include "basic_ros_topic/animation.h"
+#include "function/animation.h"
 #include "tool_box/base_time_struct.h"
 
 #include <matplotlibcpp17/pyplot.h>
-#include "basic_ros_topic/weighted_window_mode.h"
-#include "basic_ros_topic/ros_topic_parser.h"
+#include "function/weighted_window_mode.h"
+#include "function/ros_topic_parser.h"
 
 #include <algorithm>
 #include <vector>
@@ -262,7 +262,7 @@ void SetParam(int argc, char *argv[]) {
  */
 void ExtractData() {
   // 获取包路径
-  std::string package_path = ros::package::getPath("basic_ros_topic");
+  std::string package_path = ros::package::getPath("offline_ros");
 
   // 构建完整路径
   std::string data_file = package_path + "/data/test_data01.csv";

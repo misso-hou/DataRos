@@ -1,9 +1,9 @@
-#include "basic_ros_topic/ros_topic_parser.h"
+#include "function/ros_topic_parser.h"
 #include <ros/package.h>
 
 MsgParserTest::MsgParserTest() {
     // 获取包的路径
-    std::string package_path = ros::package::getPath("basic_ros_topic");
+    std::string package_path = ros::package::getPath("offline_ros");
     // 构造绝对路径
     csv_file_path_ = package_path + "/data/test_data01.csv";
     // 打开CSV文件，清空原有内容（相当于Python中的'w'模式）
