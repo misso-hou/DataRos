@@ -32,7 +32,7 @@ class Animation : public utilities::Singleton<Animation> {
 
  public:
   void SetSteerWheelData(const vector<float>& new_data);
-  void Monitor(int buffer_length);
+  void Monitor(int buffer_length,const string& time);
   void InitializePlt();
   void BarPlot01(const std::unordered_map<int, int>& frequency,const std::unordered_map<int, int>& frequency02);
   void BarPlot02(const std::unordered_map<int, int>& frequency);

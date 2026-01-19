@@ -25,6 +25,16 @@ using namespace std;
 namespace Anim = modules::animation;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 
+enum class DataIndex{
+  SWA = 0,
+  SWT,
+  WHEEL_SPEED,
+  YAW_RATE,
+  SWT_F1,
+  SWT_F2,
+  BIAD_SWT
+};
+
 /**
  * @brief:按行读取csv数据(分组数据需要设置组中对应的行序列)
  * @param:
@@ -33,7 +43,7 @@ Anim::Animation *Animator = Anim::Animation::GetInstance();
  *      bias_index:数据在csv数据组中对应的行索引
  * @return:csv数据转成的二维数组数据
  */
-vector<vector<float>> RowDataReader(string file_name, int row_num, int bias_index) {
+vector<vector<float>> RowDataReader(string file_name,vector<long long>& time, int row_num, int bias_index) {
   ifstream file(file_name);  // csv文件导入
   if (!file.is_open()) {
     cout << file_name << "----->"
@@ -46,6 +56,8 @@ vector<vector<float>> RowDataReader(string file_name, int row_num, int bias_inde
   vector<vector<float>> all_data;
   string line;
   int line_index = 1;
+
+  vector<long long> exact_timestamps;  // 存储精确时间戳
   while (getline(file, line)) {  // 按行提取csv文件
     // 将障碍物数据中index的倍数行提取
     if ((line_index - bias_index) % row_num == 0) {  // note:障碍物三行数据为一组
@@ -53,10 +65,17 @@ vector<vector<float>> RowDataReader(string file_name, int row_num, int bias_inde
       string charItem;
       float fItem = 0.f;
       vector<float> one_line_data;
+      int col_count = 0;  //NOTE:时间戳独立解析
+      long long exact_ts = 0;
       /*提取行点集数据*/
       while (getline(s1, charItem, ',')) {
-        fItem = stof(charItem);
-        one_line_data.push_back(fItem);
+        if (col_count == 0) {  // 第一列：时间戳
+          exact_ts = stoll(charItem);  // 改为stoll获取精确值
+          exact_timestamps.push_back(exact_ts);  // 存储精确值
+        } else {  // 其他列
+          one_line_data.push_back(stof(charItem));
+        }
+        col_count++;
       }
       all_data.push_back(one_line_data);
     } else {
@@ -66,6 +85,7 @@ vector<vector<float>> RowDataReader(string file_name, int row_num, int bias_inde
     line_index++;
   }
   // ifs.close();
+  time = exact_timestamps;
   return all_data;
 }
 
@@ -245,14 +265,14 @@ void ExtractData() {
   std::string package_path = ros::package::getPath("basic_ros_topic");
 
   // 构建完整路径
-  std::string data_file = package_path + "/data/test_data.csv";
+  std::string data_file = package_path + "/data/test_data01.csv";
   
   std::cout << "包路径: " << package_path << std::endl;
   std::cout << "数据文件: " << data_file << std::endl;
   // //数据文件路径
   // string data_file = "../data/test_data.csv";
   //数据提取
-  data_mat_ = RowDataReader(data_file, 1, 1);
+  data_mat_ = RowDataReader(data_file, ts_, 1, 1);
   data_length_ = data_mat_.size();
 }
 
@@ -283,6 +303,20 @@ float LowPassFilter02(const float& data,const float& alpha) {
   return filtered_data;
 }
 
+string getLogTimestamp(const int index){
+  // 关键修正：先定义time_t变量（左值），再取地址
+  time_t raw_sec = ts_[index];
+  struct tm t;
+  gmtime_r(&raw_sec, &t); // 现在可以正常取地址，无编译报错
+  // 时区修正：UTC+8（北京时间），取模24避免小时超过23
+  int beijing_hour = (t.tm_hour + 8) % 24;
+  // 仅打印北京时间的时分秒
+  string local_time = std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
+                      std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
+                      std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10);
+  return local_time;
+}
+
 
 /*
  * ---------数据回放使用方法----------：
@@ -293,9 +327,6 @@ float LowPassFilter02(const float& data,const float& alpha) {
  * csv文件内部默认只有一组数据
  */
 int main(int argc, char *argv[]) {
-  ros::init(argc, argv, "data_player");
-  ros::NodeHandle nh;
-
   WeightedWindows windows(2000,400);
   pybind11::scoped_interpreter guard{};
   SetParam(argc, argv);
@@ -307,17 +338,17 @@ int main(int argc, char *argv[]) {
     if (!KeyboardCtrl(i)) break;
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
     auto data_row = data_mat_[i];
-    auto filter_torque01 = LowPassFilter01(data_row[1],0.05);
-    auto filter_torque02 = LowPassFilter02(data_row[1],0.1);
+    string local_time = getLogTimestamp(i);
+    auto filter_torque01 = LowPassFilter01(data_row[static_cast<int>(DataIndex::SWT)],0.05);
+    auto filter_torque02 = LowPassFilter02(data_row[static_cast<int>(DataIndex::SWT)],0.1);
     data_row.push_back(filter_torque01);
     data_row.push_back(filter_torque02);
-    data_row[0]*=2;
-    auto mode = windows.getWeightedMode(filter_torque02,data_row[2],data_row[0]);
-    // cout << "debug 02: tick->" << i << "; mode:" << mode << endl;
+    data_row[static_cast<int>(DataIndex::SWA)]*=2;
+    auto mode = windows.getWeightedMode(filter_torque02,data_row[static_cast<int>(DataIndex::WHEEL_SPEED)],data_row[static_cast<int>(DataIndex::SWA)]);
     data_row.push_back(mode);
     Animator->SetSteerWheelData(data_row);
     /*------动画显示-----*/
-    Animator->Monitor(600);
+    Animator->Monitor(600,local_time);
     auto freq01 = windows.GetLongFreqency();
     // Animator->BarPlot01(freq01);
     auto freq02 = windows.GetShortFreqency();

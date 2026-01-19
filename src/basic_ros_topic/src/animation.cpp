@@ -108,7 +108,7 @@ void Animation::SetSteerWheelData(const vector<float>& new_data) {
   steer_wheel_plt_data_ = new_data;
 }
 
-void Animation::Monitor(int buffer_length) {
+void Animation::Monitor(int buffer_length,const string& time) {
   static bool once_flag = true;
   /******动画频率设置******/
   static int64_t last_sim_time_stamp = 0;
@@ -124,6 +124,9 @@ void Animation::Monitor(int buffer_length) {
   static mesh2D line_data(data_num);
   static vector<py::object> lines_artist(data_num);
   static vector<py::object> legend_artist(3);
+  //标注数据
+  static py::object text_artist;
+  string local_time = "local time: " + time;
   for(uint i=0;i<data_num;i++){
     line_data[i].push_back(steer_wheel_plt_data_[i]);
   }
@@ -139,6 +142,8 @@ void Animation::Monitor(int buffer_length) {
   static vector<string> lables = {"SWA","SWT", "wheel_speed","yaw_rate","SWT_f1" ,"SWT_f2","bias_T"};
   if (once_flag) {
     once_flag = false;
+    py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
+    text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
     for (int i = 0; i < line_data.size(); i++) {
       if(i<2 || i>=4){
         lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
@@ -168,6 +173,9 @@ void Animation::Monitor(int buffer_length) {
   data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
   data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
   data_axes03_ptr_->unwrap().attr("draw_artist")(legend_artist[2]);
+  // text数据
+  text_artist.attr("set_text")(local_time);
+  data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
   /******axis计算******/
   auto axes_xlim = data_axes01_ptr_->get_xlim();
   if (time_array.back() > get<1>(axes_xlim) - 10) {

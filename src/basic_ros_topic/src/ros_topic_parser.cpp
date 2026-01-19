@@ -62,13 +62,14 @@ void MsgParserTest::callback(const std_msgs::String::ConstPtr& msg)
         int beijing_hour = (t.tm_hour + 8) % 24;
         
         // 仅打印北京时间的时分秒
-        ROS_INFO("%02d:%02d:%02d", beijing_hour, t.tm_min, t.tm_sec);
-
+        local_time_ = std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
+                        std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
+                        std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10);
         
         // 如果数据不是0.0，写入CSV
         if (steering_wheel_torque != 0.0)
         {
-            writeToCSV(ts_msec, steering_wheel_angle, steering_wheel_torque, wheel_speed, yaw_rate);
+            writeToCSV(static_cast<time_t>(ts_sec), steering_wheel_angle, steering_wheel_torque, wheel_speed, yaw_rate);
         }
 
         // update record data
@@ -90,7 +91,7 @@ void MsgParserTest::callback(const std_msgs::String::ConstPtr& msg)
     }
 }
 
-void MsgParserTest::writeToCSV(double timestamp, double angle, double torque, double speed, double yaw)
+void MsgParserTest::writeToCSV(time_t timestamp, double angle, double torque, double speed, double yaw)
 {
     if (!csv_file_.is_open())
     {
@@ -114,7 +115,8 @@ void MsgParserTest::writeToCSV(double timestamp, double angle, double torque, do
 
 VehicleData MsgParserTest::getVehicleData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
-    return {steering_wheel_angle_, 
+    return {local_time_,
+            steering_wheel_angle_, 
             steering_wheel_torque_, 
             wheel_speed_,
             yaw_rate_};

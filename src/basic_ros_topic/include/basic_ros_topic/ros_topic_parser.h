@@ -10,6 +10,7 @@
 #include "plusai_common_proto/control/dbw_reports.pb.h"
 
 struct VehicleData {
+    std::string local_time;
     double steer_wheel_angle;
     double steer_wheel_torque;
     double wheel_speed;
@@ -26,7 +27,7 @@ class MsgParserTest {
 
     private:
         void callback(const std_msgs::String::ConstPtr& msg);
-        void writeToCSV(double timestamp, double angle, double torque, double speed, double yaw);
+        void writeToCSV(time_t timestamp, double angle, double torque, double speed, double yaw);
     
     private:
         ros::NodeHandle nh_;
@@ -36,6 +37,7 @@ class MsgParserTest {
         std::mutex data_mutex_;
 
     private:   // 数据成员变量
+        std::string local_time_;
         double steering_wheel_angle_;
         double steering_wheel_torque_;
         double wheel_speed_;

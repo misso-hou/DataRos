@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
     data_row.push_back(mode);
     Animator->SetSteerWheelData(data_row);
     /*------动画显示-----*/
-    Animator->Monitor(600);
+    Animator->Monitor(600,realtime_data.local_time);
     auto freq01 = windows.GetLongFreqency();
     // Animator->BarPlot01(freq01);
     auto freq02 = windows.GetShortFreqency();

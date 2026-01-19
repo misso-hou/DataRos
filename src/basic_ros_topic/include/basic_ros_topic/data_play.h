@@ -24,6 +24,7 @@ int cycle_time_;
 int start_index_;
 int data_length_;
 //提取数据容器
+vector<long long> ts_;
 mesh2D data_mat_;
 //键盘控制
 bool pause_;
@@ -37,7 +38,8 @@ float filtered_data02_ = 0.0;
 /*读csv数据函数*/
 float LowPassFilter01(const float& data,const float& alpha);
 float LowPassFilter02(const float& data,const float& alpha);
-vector<vector<float>> RowDataReader(string file_name, int row_num, int bias_index);
+vector<vector<float>> RowDataReader(string file_name, vector<long long>& time, int row_num, int bias_index);
+string getLogTimestamp(const int index);
 // 按键控制相关函数
 char GetKey();
 string GetKeyWithTimeout(int timeout_ms);
