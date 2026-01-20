@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
   pybind11::scoped_interpreter guard{};
   disp_ctrl_ptr->SetParam(argc, argv);
   disp_ctrl_ptr->ExtractData();
-  Animator->InitializePlt();
+  Animator->InitWeightedWindowsPlt();
   for (int i = disp_ctrl_ptr->start_index_; i < disp_ctrl_ptr->data_length_;)  //数据行遍历
   {
     //键盘控制
@@ -55,11 +55,10 @@ int main(int argc, char *argv[]) {
     data_row.push_back(mode);
     Animator->SetSteerWheelData(data_row);
     /*------动画显示-----*/
-    Animator->Monitor(600,local_time);
+    Animator->SWTorqueMonitor(600,local_time);
     auto freq01 = windows.GetLongFreqency();
-    // Animator->BarPlot01(freq01);
     auto freq02 = windows.GetShortFreqency();
-    Animator->BarPlot01(freq01,freq02);
+    Animator->BarPlot(freq01,freq02);
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
     int64_t remaining_T = disp_ctrl_ptr->cycle_time_ - (end_time - start_time);
     if (remaining_T > 0) {

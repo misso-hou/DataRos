@@ -1,7 +1,7 @@
 #include "function/ros_topic_parser.h"
 #include <ros/package.h>
 
-MsgParserTest::MsgParserTest() {
+MsgParser::MsgParser() {
     // 获取包的路径
     std::string package_path = ros::package::getPath("offline_ros");
     // 构造绝对路径
@@ -18,12 +18,12 @@ MsgParserTest::MsgParserTest() {
     // csv_file_ << "steering_wheel_angle,steering_wheel_torque,wheel_speed,yaw_rate\n";
     
     // 订阅话题
-    sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParserTest::callback, this);
+    sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::callback, this);
     
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
 }
 
-MsgParserTest::~MsgParserTest()
+MsgParser::~MsgParser()
 {
     if (csv_file_.is_open())
     {
@@ -31,7 +31,7 @@ MsgParserTest::~MsgParserTest()
     }
 }
 
-void MsgParserTest::callback(const std_msgs::String::ConstPtr& msg)
+void MsgParser::callback(const std_msgs::String::ConstPtr& msg)
 {
     try
     {
@@ -91,7 +91,7 @@ void MsgParserTest::callback(const std_msgs::String::ConstPtr& msg)
     }
 }
 
-void MsgParserTest::writeToCSV(time_t timestamp, double angle, double torque, double speed, double yaw)
+void MsgParser::writeToCSV(time_t timestamp, double angle, double torque, double speed, double yaw)
 {
     if (!csv_file_.is_open())
     {
@@ -113,7 +113,7 @@ void MsgParserTest::writeToCSV(time_t timestamp, double angle, double torque, do
     // ROS_INFO("Saved: %.3f, %.3f, %.3f, %.3f", angle, torque, speed, yaw);
 }
 
-VehicleData MsgParserTest::getVehicleData() {
+VehicleData MsgParser::getVehicleData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
             steering_wheel_angle_, 

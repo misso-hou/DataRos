@@ -7,7 +7,7 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "dbw_reports_listener");
     
     // 创建监听器对象
-    MsgParserTest msg_parser;
+    MsgParser msg_parser;
 
     ROS_INFO("ROS listener started, waiting for messages on /vehicle/dbw_reports...");
     

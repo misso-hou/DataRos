@@ -65,10 +65,10 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "realtime_module");
   ros::NodeHandle nh;
   // 创建监听器对象
-  MsgParserTest msg_parser;
+  MsgParser msg_parser;
   AlgWW::WeightedWindows windows(2000,400);
   pybind11::scoped_interpreter guard{};
-  Animator->InitializePlt();
+  Animator->InitWeightedWindowsPlt();
   //主程序线程
   ros::Rate rt(50);
   while (ros::ok()) {
@@ -89,11 +89,10 @@ int main(int argc, char *argv[]) {
     data_row.push_back(mode);
     Animator->SetSteerWheelData(data_row);
     /*------动画显示-----*/
-    Animator->Monitor(600,realtime_data.local_time);
+    Animator->SWTorqueMonitor(600,realtime_data.local_time);
     auto freq01 = windows.GetLongFreqency();
-    // Animator->BarPlot01(freq01);
     auto freq02 = windows.GetShortFreqency();
-    Animator->BarPlot01(freq01,freq02);
+    Animator->BarPlot(freq01,freq02);
     rt.sleep();
   }
   pybind11::finalize_interpreter();

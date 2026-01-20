@@ -17,10 +17,10 @@ struct VehicleData {
     double yaw_rate;
 };
 
-class MsgParserTest {
+class MsgParser {
     public:
-        MsgParserTest();
-        ~MsgParserTest();
+        MsgParser();
+        ~MsgParser();
 
     public:
         VehicleData getVehicleData();

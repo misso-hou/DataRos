@@ -12,6 +12,7 @@ const int DURATION = 50;
 const int Y_RANGE = 10;
 const float BAR_X = 3.0;
 const int DATA_BUFFER = 600;
+const vector<string> COLORS = {"red","orange", "yellow","green","cyan" ,"blue","purple"};
 
 // canvas and flush events
 auto canvas_update_flush_events = [](pybind11::object figure) {
@@ -38,11 +39,17 @@ auto canvas_restore_region = [](pybind11::object figure, pybind11::object bg) {
   canvas_restore_region_attr(bg);
 };
 
-void Animation::InitializePlt() {
+void Animation::InitWeightedWindowsPlt() {
   /***速度监视器***/
-  pybind11::dict cmd_kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100, "tight_layout"_a = true);
-  CmdPltInit(cmd_kwargs, CMD_X_RANGE);
-  BarPltInit(cmd_kwargs);
+  pybind11::dict kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100, "tight_layout"_a = true);
+  SWTorquePltInit(kwargs, CMD_X_RANGE);
+  BarPltInit(kwargs);
+}
+
+void Animation::InitBrakeSysPlt() {
+  /***速度监视器***/
+  pybind11::dict kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100, "tight_layout"_a = true);
+  BrakePltInit(kwargs, CMD_X_RANGE);
 }
 
 bool Animation::FrequencyCtrl(int T, int64_t& last_time_stamp) {
@@ -55,6 +62,7 @@ bool Animation::FrequencyCtrl(int T, int64_t& last_time_stamp) {
   last_time_stamp = current_time_stamp;
   return false;
 }
+
 void Animation::BarPltInit(const pybind11::dict& fig_kwargs) {
   auto plt = mpl::pyplot::import();  
   auto [figure, axes] = plt.subplots();                              
@@ -70,14 +78,14 @@ void Animation::BarPltInit(const pybind11::dict& fig_kwargs) {
   bar_background_ = canvas_copy_from_bbox(bar_figure_ptr_->unwrap());
 }
 
-void Animation::CmdPltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range) {
+void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range) {
   data_plt_ = mpl::pyplot::import();                                
   mpl::figure::Figure figure = data_plt_.figure(Args(), fig_kwargs); 
   data_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);
   auto data_gs = GridSpec(4, 1);  
 
   //axes01
-  auto axes_obj_01 = figure.add_subplot(Args(data_gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "lightsalmon"));           
+  auto axes_obj_01 = figure.add_subplot(Args(data_gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "gray"));           
   data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);    
   data_axes01_ptr_->set_xlim(Args(-0.3f, x_axis_range));
   data_axes01_ptr_->set_ylim(Args(-1, 2.5));   
@@ -103,11 +111,40 @@ void Animation::CmdPltInit(const pybind11::dict& fig_kwargs, const float& x_axis
   data_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());
 }
 
+void Animation::BrakePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range) {
+  data_plt_ = mpl::pyplot::import();                                
+  mpl::figure::Figure figure = data_plt_.figure(Args(), fig_kwargs); 
+  data_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);
+  auto data_gs = GridSpec(3, 1);  
+  //axes01
+  auto axes_obj_01 = figure.add_subplot(Args(data_gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "gray"));           
+  data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);  
+  data_axes01_ptr_->set(Args(), Kwargs("title"_a = "brake data"));  
+  data_axes01_ptr_->set_xlim(Args(-0.3f, x_axis_range));
+  data_axes01_ptr_->set_ylim(Args(-5, 0.5));   
+  data_plt_.show(Args(), Kwargs("block"_a = 0));
+  data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
+  //axes02  
+  auto axes_obj_02 = figure.add_subplot(Args(data_gs(2,0).unwrap()));            
+  data_axes02_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_02);    
+  data_axes02_ptr_->set_xlim(Args(-0.3f, x_axis_range));
+  data_axes02_ptr_->set_ylim(Args(-5, 250));   
+  data_plt_.show(Args(), Kwargs("block"_a = 0));
+  data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
+  // data_axes01_ptr_->unwrap().attr("set_axis_off")();
+  data_plt_.pause(Args(0.1));
+  data_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());
+}
+
 void Animation::SetSteerWheelData(const vector<float>& new_data) {
   steer_wheel_plt_data_ = new_data;
 }
 
-void Animation::Monitor(int buffer_length,const string& time) {
+void Animation::SetBrakeData(const vector<float>& new_data) {
+  brake_plt_data_ = new_data;
+}
+
+void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
   static bool once_flag = true;
   /******动画频率设置******/
   static int64_t last_sim_time_stamp = 0;
@@ -137,7 +174,6 @@ void Animation::Monitor(int buffer_length,const string& time) {
     }
   }
   /*step02->static artist生成*/
-  static vector<string> colors = {"silver", "b","blueviolet","g" ,"cyan","gold","r"};
   static vector<string> lables = {"SWA","SWT", "wheel_speed","yaw_rate","SWT_f1" ,"SWT_f2","bias_T"};
   if (once_flag) {
     once_flag = false;
@@ -145,14 +181,14 @@ void Animation::Monitor(int buffer_length,const string& time) {
     text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
     for (int i = 0; i < line_data.size(); i++) {
       if(i<2 || i>=4){
-        lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
+        lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
         legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
       }
       else if(i==2){
-        lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
+        lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
         legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
       }else if(i==3){
-        lines_artist[i] = data_axes03_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = colors[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
+        lines_artist[i] = data_axes03_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
         legend_artist[2] = data_axes03_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
       }
     }
@@ -187,7 +223,7 @@ void Animation::Monitor(int buffer_length,const string& time) {
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 
-void Animation::BarPlot01(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02) {
+void Animation::BarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02) {
   using namespace ALG::WeightedWindows;
   static bool once_flag = true;
   canvas_restore_region(bar_figure_ptr_->unwrap(), bar_background_);
@@ -251,5 +287,71 @@ void Animation::BarPlot01(const std::unordered_map<int, int>& frequency01,const 
 
   canvas_update_flush_events(bar_figure_ptr_->unwrap());
 }
+
+void Animation::BrakeMonitor(int buffer_length) {
+  static bool once_flag = true;
+  /******动画频率设置******/
+  static int64_t last_sim_time_stamp = 0;
+  if (FrequencyCtrl(DURATION, last_sim_time_stamp)) return;
+  canvas_restore_region(data_figure_ptr_->unwrap(), data_background_);
+  /******数据计算******/
+  /*step01->实时数据更新*/
+  static vector<float> time_array;
+  static float test_tick = 0;
+  test_tick += 0.4;
+  time_array.push_back(test_tick);
+  int data_num = brake_plt_data_.size();
+  static mesh2D line_data(data_num);
+  static vector<py::object> lines_artist(data_num);
+  static vector<py::object> legend_artist(data_num);
+  for(uint i=0;i<data_num;i++){
+    line_data[i].push_back(brake_plt_data_[i]);
+  }
+  // 数据更新
+  if (time_array.size() > buffer_length) {
+    time_array.erase(time_array.begin());
+    for(auto& line:line_data){
+      line.erase(line.begin());
+    }
+  }
+  /*step02->static artist生成*/
+  static vector<string> lables = {"ebs","pressure", "acc_mes","brake_gain","none" ,"none","none"};
+  if (once_flag) {
+    once_flag = false;
+    for (int i = 0; i < line_data.size(); i++) {
+      if(i<3){
+        lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0, "label"_a = lables[i])).unwrap().cast<py::list>()[0];
+        legend_artist[i] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
+      }
+      else if(i==3){
+        lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0, "label"_a = lables[i])).unwrap().cast<py::list>()[0];
+        legend_artist[i] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+      }
+    }
+  }
+  /*step03->artist实时数据更新并绘制*/
+  for (int j = 0; j < lines_artist.size(); j++) {
+    lines_artist[j].attr("set_data")(time_array, line_data[j]);
+    if(j<3){
+      data_axes01_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
+      data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[j]);
+    }
+    else if(j==3){
+      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
+      data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[j]);
+    }
+  }
+  /******axis计算******/
+  auto axes_xlim = data_axes01_ptr_->get_xlim();
+  if (time_array.back() > get<1>(axes_xlim) - 10) {
+    float x_min = get<1>(axes_xlim) - 20.f;
+    float x_max = x_min + CMD_X_RANGE;
+    data_axes01_ptr_->set_xlim(Args(x_min, x_max));
+    data_axes02_ptr_->set_xlim(Args(x_min, x_max));
+  }
+
+  canvas_update_flush_events(data_figure_ptr_->unwrap());
+}
+
 }
 }
