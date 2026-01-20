@@ -1,0 +1,75 @@
+#pragma once
+
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <vector>
+#include "function/ros_topic_parser.h"
+
+using namespace std;
+using mesh2D = vector<vector<float>>;
+
+enum class DataIndex{
+    SWA = 0,
+    SWT,
+    WHEEL_SPEED,
+    YAW_RATE,
+    SWT_F1,
+    SWT_F2,
+    BIAD_SWT
+};
+
+class DisplayControl
+{
+    public:
+        DisplayControl(){};
+        ~DisplayControl(){};
+
+    public:
+        /*读csv数据函数*/
+        float LowPassFilter01(const float& data,const float& alpha);
+        float LowPassFilter02(const float& data,const float& alpha);
+        vector<vector<float>> RowDataReader(string file_name, vector<long long>& time, int row_num, int bias_index);
+        string getLogTimestamp(const int index);
+        void SetParam(int argc, char *argv[]);
+        void ExtractData();
+        // 按键控制相关函数
+        char GetKey();
+        string GetKeyWithTimeout(int timeout_ms);
+        bool KeyboardCtrl(int &index);
+
+    private:
+        //提取数据容器
+        vector<long long> ts_;
+        //键盘控制
+        bool pause_;
+        bool blade_;
+        //低通滤波
+        float filtered_data01_ = 0.0;
+        float filtered_data02_ = 0.0;
+
+    public:
+        //变量定义
+        int cycle_time_;
+        int data_length_;
+        int start_index_;
+        mesh2D data_mat_;
+        bool back_;
+        bool erase_;
+};
+
+
+
+
+
+
+

@@ -63,6 +63,7 @@ add_executable(data_player_node
   src/RosNode/data_play_main.cpp      
   src/function/ros_topic_parser.cpp    
   src/function/animation.cpp
+  src/function/display_control.cpp
 )
 
 # ROS 与外部库的链接
