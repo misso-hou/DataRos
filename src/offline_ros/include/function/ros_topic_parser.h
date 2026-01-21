@@ -27,7 +27,7 @@ class MsgParser {
 
     private:
         void callback(const std_msgs::String::ConstPtr& msg);
-        void writeToCSV(time_t timestamp, double angle, double torque, double speed, double yaw);
+        void writeToCSV(time_t timestamp, const std::vector<double>& data);
     
     private:
         ros::NodeHandle nh_;

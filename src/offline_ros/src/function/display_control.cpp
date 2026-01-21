@@ -237,7 +237,7 @@ void DisplayControl::SetParam(int argc, char *argv[]) {
  */
 void DisplayControl::ExtractData() {
   // 从当前工作目录出发
-  std::string data_file = "src/offline_ros/data/test_data01.csv";  // 相对当前目录
+  std::string data_file = "src/offline_ros/data/swa01.csv";  // 相对当前目录
   std::cout << "数据文件: " << data_file << std::endl;
   //数据提取
   data_mat_ = RowDataReader(data_file, ts_, 1, 1);

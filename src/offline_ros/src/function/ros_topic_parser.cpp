@@ -5,7 +5,7 @@ MsgParser::MsgParser() {
     // 获取包的路径
     std::string package_path = ros::package::getPath("offline_ros");
     // 构造绝对路径
-    csv_file_path_ = package_path + "/data/test_data01.csv";
+    csv_file_path_ = package_path + "/data/swa01.csv";
     // 打开CSV文件，清空原有内容（相当于Python中的'w'模式）
     csv_file_.open(csv_file_path_.c_str());
     if (!csv_file_.is_open())
@@ -41,10 +41,11 @@ void MsgParser::callback(const std_msgs::String::ConstPtr& msg)
         }
         
         // 提取数据
-        double steering_wheel_angle = dbw_report.steering_report().steering_wheel_angle();
-        double steering_wheel_torque = dbw_report.steering_report().steering_wheel_torque();
-        double wheel_speed = dbw_report.wheel_speed_report().front_axle_speed();
-        double yaw_rate = dbw_report.vehicle_dynamic().angular_velocity().z();
+        std::vector<double> data(4);
+        data[0] = dbw_report.steering_report().steering_wheel_angle();
+        data[1] = dbw_report.steering_report().steering_wheel_torque();
+        data[2] = dbw_report.wheel_speed_report().front_axle_speed();
+        data[3] = dbw_report.vehicle_dynamic().angular_velocity().z();
 
         // 提取→转秒→转时间
         double ts_msec = dbw_report.header().timestamp_msec(); // 提取原始毫秒戳
@@ -64,18 +65,18 @@ void MsgParser::callback(const std_msgs::String::ConstPtr& msg)
                         std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10);
         
         // 如果数据不是0.0，写入CSV
-        if (steering_wheel_torque != 0.0)
+        if (data[1] != 0.0)
         {
-            writeToCSV(static_cast<time_t>(ts_sec), steering_wheel_angle, steering_wheel_torque, wheel_speed, yaw_rate);
+            writeToCSV(raw_sec, data);
         }
 
         // update record data
         {
             std::lock_guard<std::mutex> lock(data_mutex_);
-            steering_wheel_angle_ = steering_wheel_angle;
-            steering_wheel_torque_ = steering_wheel_torque;
-            wheel_speed_ = wheel_speed;
-            yaw_rate_ = yaw_rate;
+            steering_wheel_angle_ = data[0];
+            steering_wheel_torque_ = data[1];
+            wheel_speed_ = data[2];
+            yaw_rate_ = data[3];
         }
     }
     catch (const std::exception& e)
@@ -88,18 +89,21 @@ void MsgParser::callback(const std_msgs::String::ConstPtr& msg)
     }
 }
 
-void MsgParser::writeToCSV(time_t timestamp, double angle, double torque, double speed, double yaw)
-{
+void MsgParser::writeToCSV(time_t timestamp, const std::vector<double>& data) {
     if (!csv_file_.is_open())
     {
         ROS_ERROR("CSV file is not open!");
         return;
     }
-    // 使用stringstream格式化数据
-    std::stringstream ss;
-    ss << timestamp << "," << angle << "," << torque << "," << speed << "," << yaw << "\n";
-    // 写入文件
-    csv_file_ << ss.str();
+    // 写入时间戳
+    csv_file_ << timestamp;
+    // 写入vector中的每个数据
+    for (const auto& value : data)
+    {
+        csv_file_ << "," << value;
+    }
+    csv_file_ << "\n";
+    csv_file_.flush();  // 可选：确保数据写入磁盘
 }
 
 VehicleData MsgParser::getVehicleData() {

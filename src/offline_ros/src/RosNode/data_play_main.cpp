@@ -10,7 +10,6 @@
 
 #include <matplotlibcpp17/pyplot.h>
 #include "algorithm/weighted_window_mode.h"
-// #include "function/ros_topic_parser.h"
 
 #include <algorithm>
 #include <vector>
