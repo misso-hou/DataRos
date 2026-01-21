@@ -13,13 +13,10 @@ MsgParser::MsgParser() {
         ROS_ERROR("Failed to open CSV file: %s", csv_file_path_.c_str());
         return;
     }
-    
     // 可选：写入CSV表头
     // csv_file_ << "steering_wheel_angle,steering_wheel_torque,wheel_speed,yaw_rate\n";
-    
     // 订阅话题
     sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::callback, this);
-    
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
 }
 
@@ -98,19 +95,11 @@ void MsgParser::writeToCSV(time_t timestamp, double angle, double torque, double
         ROS_ERROR("CSV file is not open!");
         return;
     }
-    
     // 使用stringstream格式化数据
     std::stringstream ss;
     ss << timestamp << "," << angle << "," << torque << "," << speed << "," << yaw << "\n";
-    
     // 写入文件
     csv_file_ << ss.str();
-    
-    // 立即刷新缓冲区，确保数据及时写入（可选，影响性能）
-    // csv_file_.flush();
-    
-    // 可选：打印到ROS日志
-    // ROS_INFO("Saved: %.3f, %.3f, %.3f, %.3f", angle, torque, speed, yaw);
 }
 
 VehicleData MsgParser::getVehicleData() {
