@@ -8,7 +8,7 @@ using namespace Eigen;
 namespace rls_filter {
 
 template <bool B>
-using EnableIfB = std::enable_if_t<B, int>;
+using EnableIfB = typename std::enable_if<B, int>::type;
 
 /// Template class implementing a Recursive Least Square (RLS) filter, managing
 /// both static and dynamic implementation.
@@ -16,10 +16,10 @@ using EnableIfB = std::enable_if_t<B, int>;
 /// \tparam N filter order(Static) or -1 (Dynamic)
 template <typename T, int N>
 class RLSFilter {
-  static_assert((std::is_same<long double, T>::value ||
-                 std::is_same_v<double, T> ||
-                 std::is_same<float, T>::value),
-                "T must be: long double, double or float");
+                  static_assert((std::is_same<long double, T>::value ||
+                    std::is_same<double, T>::value ||
+                    std::is_same<float, T>::value),
+                  "T must be: long double, double or float");
 
  public:
   using VectorXt = Matrix<T, N, 1>;

@@ -16,7 +16,17 @@ MsgParser::MsgParser() {
         return;
     }
     // 可选：写入CSV表头
-    // csv_file_ << "timestamp,steering_wheel_angle,steering_wheel_torque,wheel_speed,yaw_rate\n";
+    csv_file_ << "timestamp,\
+                  SWA,\      
+                  SWT,\
+                  WHEEL_SPEED,\
+                  YAW_RATE,\
+                  EBS_CMD,\
+                  ACC_MES,\
+                  ACC_REF,\
+                  SPEED,\
+                  PITCH,\
+                  BRAKE_PRESSURE\n";
     record_data_.resize(static_cast<int>(DataIndex::BRAKE_PRESSURE)+1);
     dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
     ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);

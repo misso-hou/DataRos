@@ -1,7 +1,6 @@
-#include "observer.h"
+#include "algorithm/observer.h"
 
-namespace drive{
-namespace control{
+namespace ALG{
 
 using namespace rls_filter;
 using namespace Eigen;
@@ -49,7 +48,6 @@ void BrakeTorqueObserver::initBrakeObserver(){
     y_mes_ = Eigen::VectorXd::Zero(2);
     brake_gain_RLS_ = std::make_unique<RLSFilter<double,1>>(1.0,1.0);
     Eigen::Matrix<double, 1, 1> w0;
-    w0 << 120.0;
     brake_gain_RLS_->setEstimatedCoefficients(w0);
 }
 
@@ -128,100 +126,100 @@ double BrakeTorqueObserver::estimateBrakeGain(const double& v,
 /**
  * @brief:initilize luenber observer(wheel longitudinal force observer)
  */
-void LateralObserver::initBrakeObserver(){
-    //set threshold
-    min_v_thd_ = 0.0;
-    //TODO:set vehicle params
-    // model_params_.drag_coeff = raw_param_->drag_coefficient();
-    // model_params_.front_area = raw_param_->vehicle_frontal_area();
-    // model_params_.rolling_friction_coeff = raw_param_->rolling_friction_coefficient();
-    // TEST
-    model_params_.ts = 0.0;
-    model_params_.cf = 0.0;
-    model_params_.cr = 0.0;
-    model_params_.lf = 0.0; 
-    model_params_.lr = 0.0;
-    model_params_.Iz = 0.0;
-    model_params_.mass = 0.0;
-    model_params_.v = 0.0;
-    model_params_.steering_tau = 0.0;
-    model_params_.swa_to_delta_ratio = 25.0;
-    //state space matrices
-    mat_a_ = Eigen::MatrixXd::Zero(4,4);
-    mat_b_ = Eigen::MatrixXd::Zero(4,1);
-    mat_c_ = Eigen::MatrixXd::Zero(4,4);
-    // state propagation matrix A
-    mat_a_(0,0) = -2*(model_params_.cf + model_params_.cr) / (model_params_.mass * model_params_.v);
-    mat_a_(0,1) = -model_params_.v + 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.mass * model_params_.v);
-    mat_a_(0,2) = 2*model_params_.cf / model_params_.mass;
-    mat_a_(1,0) = 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.iz * model_params_.v);
-    mat_a_(1,1) = -2*(model_params_.lf * model_params_.lf * model_params_.cf + model_params_.lr * model_params_.lr * model_params_.cr) / (model_params_.iz * model_params_.v);
-    mat_a_(1,2) = 2*model_params_.lf * model_params_.cf / model_params_.iz;
-    mat_a_(2,2) = -1 / model_params_.steering_tau;
-    mat_a_(2,3) = 1 / model_params_.steering_tau;   // REVIEW:车轮与方向盘转角转换
-    // input matrix B
-    mat_b_(2,0) = 1 / model_params_.steering_tau;
-    // matrix C
-    mat_c_(1,1) = 1;
-    // observer matrix L //TODO:
-    mat_L_ = Eigen::MatrixXd::Zero(4,1);
-    mat_L_(0,0) = 0.0;
-    mat_L_(1,0) = 0.0;
-    mat_L_(2,0) = 0.0;
-    mat_L_(3,0) = 0.0;
-    x_hat_ = Eigen::VectorXd::Zero(4,1);
-    y_mes_ = Eigen::VectorXd::Zero(4,1);
+// void LateralObserver::initBrakeObserver(){
+//     //set threshold
+//     min_v_thd_ = 0.0;
+//     //TODO:set vehicle params
+//     // model_params_.drag_coeff = raw_param_->drag_coefficient();
+//     // model_params_.front_area = raw_param_->vehicle_frontal_area();
+//     // model_params_.rolling_friction_coeff = raw_param_->rolling_friction_coefficient();
+//     // TEST
+//     model_params_.ts = 0.0;
+//     model_params_.cf = 0.0;
+//     model_params_.cr = 0.0;
+//     model_params_.lf = 0.0; 
+//     model_params_.lr = 0.0;
+//     model_params_.Iz = 0.0;
+//     model_params_.mass = 0.0;
+//     model_params_.v = 0.0;
+//     model_params_.steering_tau = 0.0;
+//     model_params_.swa_to_delta_ratio = 25.0;
+//     //state space matrices
+//     mat_a_ = Eigen::MatrixXd::Zero(4,4);
+//     mat_b_ = Eigen::MatrixXd::Zero(4,1);
+//     mat_c_ = Eigen::MatrixXd::Zero(4,4);
+//     // state propagation matrix A
+//     mat_a_(0,0) = -2*(model_params_.cf + model_params_.cr) / (model_params_.mass * model_params_.v);
+//     mat_a_(0,1) = -model_params_.v + 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.mass * model_params_.v);
+//     mat_a_(0,2) = 2*model_params_.cf / model_params_.mass;
+//     mat_a_(1,0) = 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.iz * model_params_.v);
+//     mat_a_(1,1) = -2*(model_params_.lf * model_params_.lf * model_params_.cf + model_params_.lr * model_params_.lr * model_params_.cr) / (model_params_.iz * model_params_.v);
+//     mat_a_(1,2) = 2*model_params_.lf * model_params_.cf / model_params_.iz;
+//     mat_a_(2,2) = -1 / model_params_.steering_tau;
+//     mat_a_(2,3) = 1 / model_params_.steering_tau;   // REVIEW:车轮与方向盘转角转换
+//     // input matrix B
+//     mat_b_(2,0) = 1 / model_params_.steering_tau;
+//     // matrix C
+//     mat_c_(1,1) = 1;
+//     // observer matrix L //TODO:
+//     mat_L_ = Eigen::MatrixXd::Zero(4,1);
+//     mat_L_(0,0) = 0.0;
+//     mat_L_(1,0) = 0.0;
+//     mat_L_(2,0) = 0.0;
+//     mat_L_(3,0) = 0.0;
+//     x_hat_ = Eigen::VectorXd::Zero(4,1);
+//     y_mes_ = Eigen::VectorXd::Zero(4,1);
+// }
+
+// void LateralObserver::resetObserver(const double& steer_angle){
+//     x_hat_(0, 0) = 0.0;
+//     x_hat_(1, 0) = model_params_.yaw_rate();
+//     x_hat_(2, 0) = steer_angle;
+// }
+
+// /**
+//  * @brief:propogate the state space model
+//  * wheel dynamic-> I*omege_w_dot - R*Fx + T_brake = 0
+//  * state->(Fx,omega_wheel,)
+//  */
+// void LateralObserver::stateUpdate(const double& speed,
+//                                   const double& yaw_rate,
+//                                   const double& steering_wheel_angle){
+//     //step0->set model params
+//     model_params_.v = speed;
+//     model_params_.yaw_rate = yaw_rate;
+//     //TODO:update steering tau by interpolation???
+//     //step01->update measurement(front wheel steering angle) //TODO:ebs compensation
+//     auto delta_angle = steering_wheel_angle / model_params_.swa_to_delta_ratio;
+//     if(model_params_.v < min_v_thd_){
+//         resetObserver(delta_angle);
+//     }                        
+//     //step02->update state space matrices time variant variables
+//     mat_a_(0,0) = -2*(model_params_.cf + model_params_.cr) / (model_params_.mass * model_params_.v);
+//     mat_a_(0,1) = -model_params_.v + 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.mass * model_params_.v);
+//     mat_a_(1,0) = 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.iz * model_params_.v);
+//     mat_a_(1,1) = -2*(model_params_.lf * model_params_.lf * model_params_.cf + model_params_.lr * model_params_.lr * model_params_.cr) / (model_params_.iz * model_params_.v);
+//     mat_b_(2,0) = 1 / model_params_.steering_tau;
+//     //step3->first order approximation of ODE
+//     auto y_err = yaw_rate - x_hat_(1);
+//     x_hat_ += model_params_.ts * (mat_a_ * x_hat_ + mat_b_ * delta_angle) + mat_L_ * y_err;                                   
+// }
+
+// /**
+//  * @brief:steering first order delay variable time 
+//  */
+// void LateralObserver::setSteerTau(const double& steer_tau){
+//     model_params_.steer_tau = steer_tau;
+// }
+
+// double LateralObserver::getSteerAngle(){
+//     return x_hat_(2);
+// }
+
+// double LateralObserver::getSteeringWheelOffsetAngle(){
+//     auto offset_angle = x_hat(3) * model_params_.swa_to_delta_ratio;
+// }
+
+
 }
 
-void LateralObserver::resetObserver(const double& steer_angle){
-    x_hat_(0, 0) = 0.0;
-    x_hat_(1, 0) = model_params_.yaw_rate();
-    x_hat_(2, 0) = steer_angle;
-}
-
-/**
- * @brief:propogate the state space model
- * wheel dynamic-> I*omege_w_dot - R*Fx + T_brake = 0
- * state->(Fx,omega_wheel,)
- */
-void LateralObserver::stateUpdate(const double& speed,
-                                  const double& yaw_rate,
-                                  const double& steering_wheel_angle){
-    //step0->set model params
-    model_params_.v = speed;
-    model_params_.yaw_rate = yaw_rate;
-    //TODO:update steering tau by interpolation???
-    //step01->update measurement(front wheel steering angle) //TODO:ebs compensation
-    auto delta_angle = steering_wheel_angle / model_params_.swa_to_delta_ratio;
-    if(model_params_.v < min_v_thd_){
-        resetObserver(delta_angle);
-    }                        
-    //step02->update state space matrices time variant variables
-    mat_a_(0,0) = -2*(model_params_.cf + model_params_.cr) / (model_params_.mass * model_params_.v);
-    mat_a_(0,1) = -model_params_.v + 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.mass * model_params_.v);
-    mat_a_(1,0) = 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.iz * model_params_.v);
-    mat_a_(1,1) = -2*(model_params_.lf * model_params_.lf * model_params_.cf + model_params_.lr * model_params_.lr * model_params_.cr) / (model_params_.iz * model_params_.v);
-    mat_b_(2,0) = 1 / model_params_.steering_tau;
-    //step3->first order approximation of ODE
-    auto y_err = yaw_rate - x_hat_(1);
-    x_hat_ += model_params_.ts * (mat_a_ * x_hat_ + mat_b_ * delta_angle) + mat_L_ * y_err;                                   
-}
-
-/**
- * @brief:steering first order delay variable time 
- */
-void LateralObserver::setSteerTau(const double& steer_tau){
-    model_params_.steer_tau = steer_tau;
-}
-
-double LateralObserver::getSteerAngle(){
-    return x_hat_(2);
-}
-
-double LateralObserver::getSteeringWheelOffsetAngle(){
-    auto offset_angle = x_hat(3) * model_params_.swa_to_delta_ratio;
-}
-
-
-}
-}

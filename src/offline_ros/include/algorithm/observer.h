@@ -3,8 +3,7 @@
 #include <Eigen/Dense>
 #include "RLS_filter.h"
 
-namespace drive {
-namespace control {
+namespace ALG{
 
 const double GRAVITY_ACCELERATION = 9.81;
 const double AIR_DENSITY = 1.225;  // kg/m^3
@@ -76,28 +75,27 @@ class BrakeTorqueObserver{
  * 横向观测器
  * link:https://www.wolai.com/oeWghNskTdDff5pzJ62fA5
  */
-class LateralObserver {
-    public:
-        LaterialObserver(){
-            initLateralObserver();
-        }
-        ~LateralObserver(){}
+// class LateralObserver {
+//     public:
+//         LaterialObserver(){
+//             initLateralObserver();
+//         }
+//         ~LateralObserver(){}
 
-    public:
-        void stateUpdate(const double& steering_wheel_angle);
+//     public:
+//         void stateUpdate(const double& steering_wheel_angle);
 
-    private: //internal 
-        LateralModelParams model_params_;
-        double min_v_thd_;
+//     private: //internal 
+//         LateralModelParams model_params_;
+//         double min_v_thd_;
 
-    private:  //state space matrices
-        Eigen::MatrixXd mat_a_;
-        Eigen::MatrixXd mat_b_;
-        Eigen::MatrixXd mat_c_;
-        Eigen::MatrixXd mat_L_;
-        Eigen::VectorXd x_hat_;
-        Eigen::VectorXd y_mes_;      
-}
+//     private:  //state space matrices
+//         Eigen::MatrixXd mat_a_;
+//         Eigen::MatrixXd mat_b_;
+//         Eigen::MatrixXd mat_c_;
+//         Eigen::MatrixXd mat_L_;
+//         Eigen::VectorXd x_hat_;
+//         Eigen::VectorXd y_mes_;      
+// };
 
-}
 }

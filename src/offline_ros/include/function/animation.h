@@ -34,7 +34,7 @@ class Animation : public utilities::Singleton<Animation> {
   void SetSteerWheelData(const vector<float>& new_data);
   void SetBrakeData(const vector<float>& new_data);
   void SWTorqueMonitor(int buffer_length,const string& time);
-  void BrakeMonitor(int buffer_length);
+  void BrakeMonitor(int buffer_length,const string& time);
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
   void BarPlot(const std::unordered_map<int, int>& frequency,const std::unordered_map<int, int>& frequency02);

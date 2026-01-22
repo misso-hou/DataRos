@@ -92,14 +92,14 @@ void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   //axes02
-  auto axes_obj_02 = figure.add_subplot(Args(data_gs(2,0).unwrap()));           
+  auto axes_obj_02 = figure.add_subplot(Args(data_gs(2,0).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
   data_axes02_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_02);    
   data_axes02_ptr_->set_xlim(Args(-0.3f, x_axis_range));
   data_axes02_ptr_->set_ylim(Args(-1, 30));   
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   //axes03
-  auto axes_obj_03 = figure.add_subplot(Args(data_gs(3,0).unwrap()));           
+  auto axes_obj_03 = figure.add_subplot(Args(data_gs(3,0).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
   data_axes03_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_03);    
   data_axes03_ptr_->set_xlim(Args(-0.3f, x_axis_range));
   data_axes03_ptr_->set_ylim(Args(-0.5, 0.5));   
@@ -119,16 +119,15 @@ void Animation::BrakePltInit(const pybind11::dict& fig_kwargs, const float& x_ax
   //axes01
   auto axes_obj_01 = figure.add_subplot(Args(data_gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "gray"));           
   data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);  
-  data_axes01_ptr_->set(Args(), Kwargs("title"_a = "brake data"));  
   data_axes01_ptr_->set_xlim(Args(-0.3f, x_axis_range));
   data_axes01_ptr_->set_ylim(Args(-5, 0.5));   
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   //axes02  
-  auto axes_obj_02 = figure.add_subplot(Args(data_gs(2,0).unwrap()));            
+  auto axes_obj_02 = figure.add_subplot(Args(data_gs(2,0).unwrap()),Kwargs("facecolor"_a = "silver"));            
   data_axes02_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_02);    
   data_axes02_ptr_->set_xlim(Args(-0.3f, x_axis_range));
-  data_axes02_ptr_->set_ylim(Args(-5, 250));   
+  data_axes02_ptr_->set_ylim(Args(-5, 10));   
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   // data_axes01_ptr_->unwrap().attr("set_axis_off")();
@@ -288,7 +287,7 @@ void Animation::BarPlot(const std::unordered_map<int, int>& frequency01,const st
   canvas_update_flush_events(bar_figure_ptr_->unwrap());
 }
 
-void Animation::BrakeMonitor(int buffer_length) {
+void Animation::BrakeMonitor(int buffer_length,const string& time) {
   static bool once_flag = true;
   /******动画频率设置******/
   static int64_t last_sim_time_stamp = 0;
@@ -303,7 +302,9 @@ void Animation::BrakeMonitor(int buffer_length) {
   int data_num = brake_plt_data_.size();
   static mesh2D line_data(data_num);
   static vector<py::object> lines_artist(data_num);
-  static vector<py::object> legend_artist(data_num);
+  static vector<py::object> legend_artist(2);
+  //标注数据
+  static py::object text_artist;
   for(uint i=0;i<data_num;i++){
     line_data[i].push_back(brake_plt_data_[i]);
   }
@@ -315,36 +316,40 @@ void Animation::BrakeMonitor(int buffer_length) {
     }
   }
   /*step02->static artist生成*/
-  static vector<string> lables = {"ebs","pressure", "acc_mes","brake_gain","none" ,"none","none"};
+  static vector<string> lables = {"ebs_cmd","acc_mes", "acc_ref","speed","pitch" ,"brake_pressure","brake_gain"};
   if (once_flag) {
     once_flag = false;
+    py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
+    text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
     for (int i = 0; i < line_data.size(); i++) {
-      if(i<3){
+      if(i==0 || i==5 || i==6){
         lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0, "label"_a = lables[i])).unwrap().cast<py::list>()[0];
-        legend_artist[i] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
-      }
-      else if(i==3){
+      }else{
         lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0, "label"_a = lables[i])).unwrap().cast<py::list>()[0];
-        legend_artist[i] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
       }
     }
+    legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
+    legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
   }
   /*step03->artist实时数据更新并绘制*/
-  for (int j = 0; j < lines_artist.size(); j++) {
-    lines_artist[j].attr("set_data")(time_array, line_data[j]);
-    if(j<3){
-      data_axes01_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
-      data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[j]);
+  for (int i = 0; i < lines_artist.size(); i++) {
+    lines_artist[i].attr("set_data")(time_array, line_data[i]);
+    if(i==0 || i==5 || i==6){
+      data_axes01_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
     }
-    else if(j==3){
-      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
-      data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[j]);
+    else{
+      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
     }
   }
+  data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
+  data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
+  // text数据
+  text_artist.attr("set_text")(local_time);
+  data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
   /******axis计算******/
   auto axes_xlim = data_axes01_ptr_->get_xlim();
-  if (time_array.back() > get<1>(axes_xlim) - 10) {
-    float x_min = get<1>(axes_xlim) - 20.f;
+  if (time_array.back() > get<1>(axes_xlim) - 5) {
+    float x_min = get<1>(axes_xlim) - 10.f;
     float x_max = x_min + CMD_X_RANGE;
     data_axes01_ptr_->set_xlim(Args(x_min, x_max));
     data_axes02_ptr_->set_xlim(Args(x_min, x_max));

@@ -1,5 +1,10 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.12)
 project(offline_ros)
+
+# 设置 C++ 标准
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -14,10 +19,6 @@ find_package(pybind11 REQUIRED)
 find_package(matplotlibcpp17 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
-
-# 设置 C++ 标准
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 定义公共依赖（多个节点共享）
 set(COMMON_LIBS
@@ -58,16 +59,31 @@ include_directories(
 file(GLOB SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 # add_executable(${PROJECT_NAME}_node ${SRC_FILES})
-# --------------------数据播放器节点--------------------
-add_executable(data_player_node
-  src/RosNode/data_play_main.cpp      
+# --------------------转向数据播放器节点--------------------
+add_executable(steer_play_node
+  src/RosNode/steer_play_node.cpp      
   src/function/ros_topic_parser.cpp    
   src/function/animation.cpp
   src/function/display_control.cpp
 )
 
 # ROS 与外部库的链接
-target_link_libraries(data_player_node
+target_link_libraries(steer_play_node
+  ${COMMON_LIBS}
+  ${VISUALIZATION_LIBS}
+)
+
+# --------------------刹车数据播放器节点--------------------
+add_executable(brake_play_node
+  src/RosNode/brake_play_node.cpp      
+  src/function/ros_topic_parser.cpp    
+  src/function/animation.cpp
+  src/function/display_control.cpp
+  src/algorithm/observer.cpp
+)
+
+# ROS 与外部库的链接
+target_link_libraries(brake_play_node
   ${COMMON_LIBS}
   ${VISUALIZATION_LIBS}
 )
@@ -98,7 +114,7 @@ target_link_libraries(ros_listener_node
 
 ###########################INSTALL###########################
 # 安装执行文件
-install(TARGETS data_player_node ros_listener_node realtime_node
+install(TARGETS steer_play_node brake_play_node ros_listener_node realtime_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

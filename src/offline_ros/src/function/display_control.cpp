@@ -30,7 +30,9 @@ vector<vector<float>> DisplayControl::RowDataReader(string file_name,vector<long
   }
   vector<vector<float>> all_data;
   string line;
-  int line_index = 1;
+  // 先读取并丢弃第一行（表头）
+  getline(file, line);
+  int line_index = 1; //note:从第二行数据开始读取,第一行表头
 
   vector<long long> exact_timestamps;  // 存储精确时间戳
   while (getline(file, line)) {  // 按行提取csv文件
