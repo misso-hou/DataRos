@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   ros::Rate rt(50);
   while (ros::ok()) {
     ros::spinOnce();
-    auto realtime_data = msg_parser.getVehicleData();
+    auto realtime_data = msg_parser.getVehicleSteerData();
     auto filter_torque01 = LowPassFilter01(realtime_data.steer_wheel_torque,0.05);
     auto filter_torque02 = LowPassFilter02(realtime_data.steer_wheel_torque,0.1);
     vector<float> data_row(4);
@@ -85,7 +85,6 @@ int main(int argc, char *argv[]) {
     data_row.push_back(filter_torque02);
     data_row[0]*=2;
     auto mode = windows.getWeightedMode(filter_torque02,data_row[2],data_row[0]);
-    // cout << "debug 02: tick->" << i << "; mode:" << mode << endl;
     data_row.push_back(mode);
     Animator->SetSteerWheelData(data_row);
     /*------动画显示-----*/

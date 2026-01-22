@@ -43,7 +43,8 @@ int main(int argc, char *argv[]) {
     //键盘控制
     if (!disp_ctrl_ptr->KeyboardCtrl(i)) break;
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
-    auto data_row = disp_ctrl_ptr->data_mat_[i];
+    // 获取前5个数据
+    auto data_row = std::vector<float>(disp_ctrl_ptr->data_mat_[i].begin(),disp_ctrl_ptr->data_mat_[i].begin() + 4);
     string local_time = disp_ctrl_ptr->getLogTimestamp(i);
     auto filter_torque01 = disp_ctrl_ptr->LowPassFilter01(data_row[static_cast<int>(DataIndex::SWT)],0.05);
     auto filter_torque02 = disp_ctrl_ptr->LowPassFilter02(data_row[static_cast<int>(DataIndex::SWT)],0.1);

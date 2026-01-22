@@ -8,13 +8,37 @@
 
 // 包含已编译的protobuf头文件
 #include "plusai_common_proto/control/dbw_reports.pb.h"
+#include "plusai_common_proto/control/control_command.pb.h"
 
-struct VehicleData {
+struct VehicleSteerData {
     std::string local_time;
-    double steer_wheel_angle;
-    double steer_wheel_torque;
-    double wheel_speed;
-    double yaw_rate;
+    float steer_wheel_angle;
+    float steer_wheel_torque;
+    float wheel_speed;
+    float yaw_rate;
+};
+
+struct VehicleBrakeData {
+    std::string local_time;
+    float ebs_cmd;
+    float acc_mes;
+    float acc_ref;
+    float speed;
+    float pitch;
+    float brake_pressure;
+};
+
+enum class DataIndex{
+    SWA = 0,
+    SWT,
+    WHEEL_SPEED,
+    YAW_RATE,
+    EBS_CMD,
+    ACC_MES,
+    ACC_REF,
+    SPEED,
+    PITCH,
+    BRAKE_PRESSURE
 };
 
 class MsgParser {
@@ -23,23 +47,23 @@ class MsgParser {
         ~MsgParser();
 
     public:
-        VehicleData getVehicleData();
+        VehicleSteerData getVehicleSteerData();
+        VehicleBrakeData getVehicleBrakeData();
 
     private:
-        void callback(const std_msgs::String::ConstPtr& msg);
-        void writeToCSV(time_t timestamp, const std::vector<double>& data);
+        void dbw_callback(const std_msgs::String::ConstPtr& msg);
+        void ctrl_callback(const std_msgs::String::ConstPtr& msg);
+        void writeToCSV(time_t timestamp, const std::vector<float>& data);
     
     private:
         ros::NodeHandle nh_;
-        ros::Subscriber sub_;
+        ros::Subscriber dbw_sub_;
+        ros::Subscriber ctrl_sub_;
         std::ofstream csv_file_;
         std::string csv_file_path_;
         std::mutex data_mutex_;
 
     private:   // 数据成员变量
         std::string local_time_;
-        double steering_wheel_angle_;
-        double steering_wheel_torque_;
-        double wheel_speed_;
-        double yaw_rate_;
+        std::vector<float> record_data_;
 };

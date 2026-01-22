@@ -1,6 +1,8 @@
 #include "function/ros_topic_parser.h"
 #include <ros/package.h>
 
+// 设置一个最小阈值，小于该值就写0
+const float MIN_WRITE_VALUE = 1e-10f;
 MsgParser::MsgParser() {
     // 获取包的路径
     std::string package_path = ros::package::getPath("offline_ros");
@@ -14,9 +16,10 @@ MsgParser::MsgParser() {
         return;
     }
     // 可选：写入CSV表头
-    // csv_file_ << "steering_wheel_angle,steering_wheel_torque,wheel_speed,yaw_rate\n";
-    // 订阅话题
-    sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::callback, this);
+    // csv_file_ << "timestamp,steering_wheel_angle,steering_wheel_torque,wheel_speed,yaw_rate\n";
+    record_data_.resize(static_cast<int>(DataIndex::BRAKE_PRESSURE)+1);
+    dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
+    ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
 }
 
@@ -28,7 +31,7 @@ MsgParser::~MsgParser()
     }
 }
 
-void MsgParser::callback(const std_msgs::String::ConstPtr& msg)
+void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
 {
     try
     {
@@ -41,11 +44,15 @@ void MsgParser::callback(const std_msgs::String::ConstPtr& msg)
         }
         
         // 提取数据
-        std::vector<double> data(4);
-        data[0] = dbw_report.steering_report().steering_wheel_angle();
-        data[1] = dbw_report.steering_report().steering_wheel_torque();
-        data[2] = dbw_report.wheel_speed_report().front_axle_speed();
-        data[3] = dbw_report.vehicle_dynamic().angular_velocity().z();
+        {
+            std::lock_guard<std::mutex> lock(data_mutex_);
+            record_data_[static_cast<int>(DataIndex::SWA)] = dbw_report.steering_report().steering_wheel_angle();
+            record_data_[static_cast<int>(DataIndex::SWT)] = dbw_report.steering_report().steering_wheel_torque();
+            record_data_[static_cast<int>(DataIndex::WHEEL_SPEED)] = dbw_report.wheel_speed_report().front_axle_speed();
+            record_data_[static_cast<int>(DataIndex::YAW_RATE)] = dbw_report.vehicle_dynamic().angular_velocity().z();
+            record_data_[static_cast<int>(DataIndex::BRAKE_PRESSURE)] = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
+            record_data_[static_cast<int>(DataIndex::SPEED)] = dbw_report.steering_report().speed();
+        }
 
         // 提取→转秒→转时间
         double ts_msec = dbw_report.header().timestamp_msec(); // 提取原始毫秒戳
@@ -59,24 +66,43 @@ void MsgParser::callback(const std_msgs::String::ConstPtr& msg)
         // 时区修正：UTC+8（北京时间），取模24避免小时超过23
         int beijing_hour = (t.tm_hour + 8) % 24;
         
-        // 仅打印北京时间的时分秒
-        local_time_ = std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
-                        std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
-                        std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10);
-        
-        // 如果数据不是0.0，写入CSV
-        if (data[1] != 0.0)
-        {
-            writeToCSV(raw_sec, data);
-        }
-
-        // update record data
         {
             std::lock_guard<std::mutex> lock(data_mutex_);
-            steering_wheel_angle_ = data[0];
-            steering_wheel_torque_ = data[1];
-            wheel_speed_ = data[2];
-            yaw_rate_ = data[3];
+            // 仅打印北京时间的时分秒
+            local_time_ = std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
+            std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
+            std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10);
+        }
+        writeToCSV(raw_sec, record_data_);
+    }
+    catch (const std::exception& e)
+    {
+        ROS_WARN("Failed to decode binary data: %s", e.what());
+    }
+    catch (...)
+    {
+        ROS_WARN("Failed to decode binary data: Unknown error");
+    }
+}
+
+void MsgParser::ctrl_callback(const std_msgs::String::ConstPtr& msg)
+{
+    try
+    {
+        drive::common::control::ControlCommand control_cmd;
+        if (!control_cmd.ParseFromString(msg->data))
+        {
+            ROS_WARN("Failed to parse protobuf message");
+            return;
+        }
+        
+        // 提取数据
+        {
+            std::lock_guard<std::mutex> lock(data_mutex_);
+            record_data_[static_cast<int>(DataIndex::EBS_CMD)] = control_cmd.brake_cmd().target_acceleration();
+            record_data_[static_cast<int>(DataIndex::ACC_MES)] = control_cmd.debug_cmd().a_report();
+            record_data_[static_cast<int>(DataIndex::ACC_REF)] = control_cmd.debug_cmd().a_target();
+            record_data_[static_cast<int>(DataIndex::PITCH)] =  control_cmd.debug_cmd().pitch_angle();
         }
     }
     catch (const std::exception& e)
@@ -89,7 +115,7 @@ void MsgParser::callback(const std_msgs::String::ConstPtr& msg)
     }
 }
 
-void MsgParser::writeToCSV(time_t timestamp, const std::vector<double>& data) {
+void MsgParser::writeToCSV(time_t timestamp, const std::vector<float>& data) {
     if (!csv_file_.is_open())
     {
         ROS_ERROR("CSV file is not open!");
@@ -100,17 +126,33 @@ void MsgParser::writeToCSV(time_t timestamp, const std::vector<double>& data) {
     // 写入vector中的每个数据
     for (const auto& value : data)
     {
-        csv_file_ << "," << value;
+        csv_file_ << ",";
+        if (std::abs(value) < MIN_WRITE_VALUE) {
+            csv_file_ << "0.0";
+        } else {
+            csv_file_ << std::fixed << std::setprecision(4) << value;
+        }
     }
     csv_file_ << "\n";
     csv_file_.flush();  // 可选：确保数据写入磁盘
 }
 
-VehicleData MsgParser::getVehicleData() {
+VehicleSteerData MsgParser::getVehicleSteerData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
-            steering_wheel_angle_, 
-            steering_wheel_torque_, 
-            wheel_speed_,
-            yaw_rate_};
+            record_data_[static_cast<int>(DataIndex::SWA)],
+            record_data_[static_cast<int>(DataIndex::SWT)],
+            record_data_[static_cast<int>(DataIndex::WHEEL_SPEED)],
+            record_data_[static_cast<int>(DataIndex::YAW_RATE)]};
+}
+
+VehicleBrakeData MsgParser::getVehicleBrakeData() {
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    return {local_time_,
+            record_data_[static_cast<int>(DataIndex::EBS_CMD)],
+            record_data_[static_cast<int>(DataIndex::ACC_MES)],
+            record_data_[static_cast<int>(DataIndex::ACC_REF)],
+            record_data_[static_cast<int>(DataIndex::SPEED)],
+            record_data_[static_cast<int>(DataIndex::PITCH)],
+            record_data_[static_cast<int>(DataIndex::BRAKE_PRESSURE)]};
 }

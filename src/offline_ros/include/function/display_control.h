@@ -18,15 +18,6 @@
 using namespace std;
 using mesh2D = vector<vector<float>>;
 
-enum class DataIndex{
-    SWA = 0,
-    SWT,
-    WHEEL_SPEED,
-    YAW_RATE,
-    SWT_F1,
-    SWT_F2,
-    BIAD_SWT
-};
 
 class DisplayControl
 {

@@ -285,7 +285,62 @@ string DisplayControl::getLogTimestamp(const int index){
   return local_time;
 }
 
-
+#pragma region
+// vector<vector<float>> DisplayControl::RowDataReader(string file_name, vector<long long>& time, int row_num, int bias_index) {
+//   ifstream file(file_name);  // csv文件导入
+//   if (!file.is_open()) {
+//     cout << file_name << "----->" << "文件不存在" << endl;
+//   }
+//   vector<vector<float>> all_data;
+//   string line;
+//   int line_index = 1;
+//   vector<long long> exact_timestamps;  // 存储精确时间戳
+//   cout << "=== 开始解析文件: " << file_name << " ===" << endl;
+//   while (getline(file, line)) {  // 按行提取csv文件
+//     // 将障碍物数据中index的倍数行提取
+//     if ((line_index - bias_index) % row_num == 0) {  // note:障碍物三行数据为一组
+//       cout << "\n处理第 " << line_index << " 行" << endl;
+//       cout << "行内容: " << line << endl;
+//       stringstream s1(line);
+//       string charItem;
+//       float fItem = 0.f;
+//       vector<float> one_line_data;
+//       int col_count = 0;  //NOTE:时间戳独立解析
+//       long long exact_ts = 0;
+//       /*提取行点集数据*/
+//       while (getline(s1, charItem, ',')) {
+//         cout << "  第" << col_count << "列: '" << charItem << "'";
+//         try {
+//           if (col_count == 0) {  // 第一列：时间戳
+//             exact_ts = stoll(charItem);  // 改为stoll获取精确值
+//             exact_timestamps.push_back(exact_ts);  // 存储精确值
+//             cout << " -> 时间戳: " << exact_ts << endl;
+//           } else {  // 其他列
+//             float val = stof(charItem);
+//             one_line_data.push_back(val);
+//             cout << " -> 浮点数: " << val << endl;
+//           }
+//         } catch (const std::exception& e) {
+//           cout << " ❌ 转换失败: " << e.what() << endl;
+//           // 让程序继续崩溃以便查看堆栈
+//           throw;
+//         }
+//         col_count++;
+//       }
+//       all_data.push_back(one_line_data);
+//       cout << "  本行数据列数: " << col_count << endl;
+//     }
+//     line_index++;
+//   }
+//   // ifs.close();
+//   time = exact_timestamps;
+//   cout << "\n=== 解析完成 ===" << endl;
+//   cout << "总行数: " << (line_index - 1) << endl;
+//   cout << "有效数据行数: " << all_data.size() << endl;
+//   cout << "时间戳数量: " << time.size() << endl;
+//   return all_data;
+// }
+#pragma engregion
 
 
 
