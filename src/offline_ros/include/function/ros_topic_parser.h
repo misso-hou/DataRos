@@ -53,7 +53,7 @@ class MsgParser {
     private:
         void dbw_callback(const std_msgs::String::ConstPtr& msg);
         void ctrl_callback(const std_msgs::String::ConstPtr& msg);
-        void writeToCSV(time_t timestamp, const std::vector<float>& data);
+        void writeToCSV(const long long timestamp, const std::vector<float>& data);
     
     private:
         ros::NodeHandle nh_;

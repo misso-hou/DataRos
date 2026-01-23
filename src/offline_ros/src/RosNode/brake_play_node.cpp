@@ -45,11 +45,14 @@ int main(int argc, char *argv[]) {
     //数据获取
     string local_time = disp_ctrl_ptr->getLogTimestamp(i);
     auto data_row = disp_ctrl_ptr->data_mat_[i];
+    auto filted_bp = disp_ctrl_ptr->LowPassFilter01(data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)],0.1);
+    data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)] = filted_bp;
     auto brake_gain = observer.estimateBrakeGain(data_row[static_cast<int>(DataIndex::SPEED)],
                                                  data_row[static_cast<int>(DataIndex::ACC_MES)],
-                                                 data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)]);
+                                                 data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)]);                                          
     data_row.at(static_cast<int>(DataIndex::BRAKE_PRESSURE)) *= -0.01; //note:可视化
     auto plt_data = std::vector<float>(data_row.begin()+4,data_row.end());
+    plt_data.push_back(data_row.at(static_cast<int>(DataIndex::WHEEL_SPEED)));
     plt_data.push_back(brake_gain*0.01);
     Animator->SetBrakeData(plt_data);
     /*------动画显示-----*/

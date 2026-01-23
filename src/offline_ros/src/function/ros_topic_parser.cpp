@@ -7,7 +7,7 @@ MsgParser::MsgParser() {
     // 获取包的路径
     std::string package_path = ros::package::getPath("offline_ros");
     // 构造绝对路径
-    csv_file_path_ = package_path + "/data/swa01.csv";
+    csv_file_path_ = package_path + "/data/record_data02.csv";
     // 打开CSV文件，清空原有内容（相当于Python中的'w'模式）
     csv_file_.open(csv_file_path_.c_str());
     if (!csv_file_.is_open())
@@ -65,25 +65,8 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
         }
 
         // 提取→转秒→转时间
-        double ts_msec = dbw_report.header().timestamp_msec(); // 提取原始毫秒戳
-        double ts_sec = ts_msec / 1000.0;                     // 转秒
-        
-        // 关键修正：先定义time_t变量（左值），再取地址
-        time_t raw_sec = static_cast<time_t>(ts_sec);
-        struct tm t;
-        gmtime_r(&raw_sec, &t); // 现在可以正常取地址，无编译报错
-
-        // 时区修正：UTC+8（北京时间），取模24避免小时超过23
-        int beijing_hour = (t.tm_hour + 8) % 24;
-        
-        {
-            std::lock_guard<std::mutex> lock(data_mutex_);
-            // 仅打印北京时间的时分秒
-            local_time_ = std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
-            std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
-            std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10);
-        }
-        writeToCSV(raw_sec, record_data_);
+        long long ts_msec = dbw_report.header().timestamp_msec(); // 提取原始毫秒戳
+        writeToCSV(ts_msec, record_data_);
     }
     catch (const std::exception& e)
     {
@@ -125,7 +108,7 @@ void MsgParser::ctrl_callback(const std_msgs::String::ConstPtr& msg)
     }
 }
 
-void MsgParser::writeToCSV(time_t timestamp, const std::vector<float>& data) {
+void MsgParser::writeToCSV(const long long timestamp, const std::vector<float>& data) {
     if (!csv_file_.is_open())
     {
         ROS_ERROR("CSV file is not open!");

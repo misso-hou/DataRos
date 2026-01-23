@@ -239,7 +239,7 @@ void DisplayControl::SetParam(int argc, char *argv[]) {
  */
 void DisplayControl::ExtractData() {
   // 从当前工作目录出发
-  std::string data_file = "src/offline_ros/data/swa01.csv";  // 相对当前目录
+  std::string data_file = "src/offline_ros/data/record_data02.csv";  // 相对当前目录
   std::cout << "数据文件: " << data_file << std::endl;
   //数据提取
   data_mat_ = RowDataReader(data_file, ts_, 1, 1);
@@ -275,15 +275,24 @@ float DisplayControl::LowPassFilter02(const float& data,const float& alpha) {
 
 string DisplayControl::getLogTimestamp(const int index){
   // 关键修正：先定义time_t变量（左值），再取地址
-  time_t raw_sec = ts_[index];
+  time_t timestamp_ms = ts_[index];
+  // 分离秒和毫秒部分
+  long long seconds = timestamp_ms / 1000;      // 整数秒部分
+  long long milliseconds = timestamp_ms % 1000; // 毫秒部分（0-999）
+  // 转换为UTC时间（秒部分）
+  time_t raw_sec = static_cast<time_t>(seconds);
   struct tm t;
-  gmtime_r(&raw_sec, &t); // 现在可以正常取地址，无编译报错
-  // 时区修正：UTC+8（北京时间），取模24避免小时超过23
+  gmtime_r(&raw_sec, &t);
+  // 时区修正：UTC+8（北京时间）
   int beijing_hour = (t.tm_hour + 8) % 24;
-  // 仅打印北京时间的时分秒
-  string local_time = std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
-                      std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
-                      std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10);
+  // 格式化为时分秒.毫秒
+  string local_time = 
+      std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
+      std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
+      std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10) + "." +
+      std::to_string(milliseconds/100) + 
+      std::to_string((milliseconds/10)%10) + 
+      std::to_string(milliseconds%10);
   return local_time;
 }
 

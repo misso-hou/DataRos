@@ -48,6 +48,7 @@ void BrakeTorqueObserver::initBrakeObserver(){
     y_mes_ = Eigen::VectorXd::Zero(2);
     brake_gain_RLS_ = std::make_unique<RLSFilter<double,1>>(1.0,1.0);
     Eigen::Matrix<double, 1, 1> w0;
+    w0 << 0.0;
     brake_gain_RLS_->setEstimatedCoefficients(w0);
 }
 
@@ -115,7 +116,7 @@ double BrakeTorqueObserver::estimateBrakeGain(const double& v,
         brake_gain_RLS_->update(new_x,virtual_brake_torque);
         // auto updated_brake_gain = brake_gain_RLS_->estimatedCoefficients();                                                 
         // brake_gain_ = updated_brake_gain[0];   
-        std::cout << "debug-> RLS brake gain:" << brake_gain_ << std::endl;
+        // std::cout << "debug-> RLS brake gain:" << brake_gain_ << std::endl;
     }                 
     auto updated_brake_gain = brake_gain_RLS_->estimatedCoefficients();                                                 
     brake_gain_ = updated_brake_gain[0];   
