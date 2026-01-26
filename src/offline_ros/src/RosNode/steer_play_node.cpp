@@ -14,13 +14,17 @@
 #include <algorithm>
 #include <vector>
 #include <iomanip>
+#include <tool_box/math_tools.h>
 
 using namespace std;
 using namespace matplotlibcpp17;
 
 using namespace std;
+using namespace func::msg_parser;
+
 namespace Anim = modules::animation;
 namespace AlgWW = ALG::WeightedWindows;
+namespace Math = toolbox::math;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 std::unique_ptr<DisplayControl> disp_ctrl_ptr = std::make_unique<DisplayControl>();
 
@@ -36,22 +40,23 @@ int main(int argc, char *argv[]) {
   AlgWW::WeightedWindows windows(2000,400);
   pybind11::scoped_interpreter guard{};
   disp_ctrl_ptr->SetParam(argc, argv);
-  disp_ctrl_ptr->ExtractData();
+  auto data_mat2D = disp_ctrl_ptr->ExtractData();
   Animator->InitWeightedWindowsPlt();
-  for (int i = disp_ctrl_ptr->start_index_; i < disp_ctrl_ptr->data_length_;)  //数据行遍历
+  for (int i = disp_ctrl_ptr->start_index_; i < data_mat2D.size();)  //数据行遍历
   {
     //键盘控制
     if (!disp_ctrl_ptr->KeyboardCtrl(i)) break;
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
+    //数据处理
+    auto& swt_filtered = data_mat2D[i][to_int(DataIndex::SWT)];
+    swt_filtered = Math::LowPassFilter(swt_filtered,0.05);
+    float swa_dot = i <= 1 ? 0 : 
+                    (data_mat2D[i][to_int(DataIndex::SWA)] - data_mat2D[i-1][to_int(DataIndex::SWA)]) / TS;
     // 获取前5个数据
-    auto data_row = std::vector<float>(disp_ctrl_ptr->data_mat_[i].begin(),disp_ctrl_ptr->data_mat_[i].begin() + 4);
+    auto data_row = std::vector<float>(data_mat2D[i].begin(),data_mat2D[i].begin() + 4);
     string local_time = disp_ctrl_ptr->getLogTimestamp(i);
-    auto filter_torque01 = disp_ctrl_ptr->LowPassFilter01(data_row[static_cast<int>(DataIndex::SWT)],0.05);
-    auto filter_torque02 = disp_ctrl_ptr->LowPassFilter02(data_row[static_cast<int>(DataIndex::SWT)],0.1);
-    data_row.push_back(filter_torque01);
-    data_row.push_back(filter_torque02);
-    data_row[static_cast<int>(DataIndex::SWA)]*=2;
-    auto mode = windows.getWeightedMode(filter_torque02,data_row[static_cast<int>(DataIndex::WHEEL_SPEED)],data_row[static_cast<int>(DataIndex::SWA)]);
+    data_row.push_back(swa_dot);
+    auto mode = windows.getWeightedMode(swt_filtered,data_row[to_int(DataIndex::WHEEL_SPEED)],data_row[to_int(DataIndex::SWA)]);
     data_row.push_back(mode);
     Animator->SetSteerWheelData(data_row);
     /*------动画显示-----*/

@@ -122,7 +122,7 @@ void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x
   auto axes_obj_01 = figure.add_subplot(Args(data_gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "gray"));           
   data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);    
   data_axes01_ptr_->set_xlim(Args(-0.3f, x_axis_range));
-  data_axes01_ptr_->set_ylim(Args(-1, 2.5));   
+  data_axes01_ptr_->set_ylim(Args(-5.0, 5.0));   
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   //axes02
@@ -219,13 +219,13 @@ void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
     }
   }
   /*step02->static artist生成*/
-  static vector<string> lables = {"SWA","SWT", "wheel_speed","yaw_rate","SWT_f1" ,"SWT_f2","bias_T"};
+  static vector<string> lables = {"SWA", "SWT", "wheel_speed", "yaw_rate", "SWA_dot", "bias_T"};
   if (once_flag) {
     once_flag = false;
     py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
     text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
     for (int i = 0; i < line_data.size(); i++) {
-      if(i<2 || i>=4){
+      if(i==0 || i==1 || i==4 || i==5){
         lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
         legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
       }

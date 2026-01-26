@@ -14,12 +14,13 @@
 #include <algorithm>
 #include <vector>
 #include <iomanip>
+#include <tool_box/math_tools.h>
 
 using namespace std;
 using namespace matplotlibcpp17;
-
-using namespace std;
+using namespace func::msg_parser;
 namespace Anim = modules::animation;
+namespace Math = toolbox::math;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 std::unique_ptr<DisplayControl> disp_ctrl_ptr = std::make_unique<DisplayControl>();
 
@@ -35,17 +36,17 @@ int main(int argc, char *argv[]) {
   ALG::BrakeTorqueObserver observer;
   pybind11::scoped_interpreter guard{};
   disp_ctrl_ptr->SetParam(argc, argv);
-  disp_ctrl_ptr->ExtractData();
+  auto data_mat2D = disp_ctrl_ptr->ExtractData();
   Animator->InitBrakeSysPlt();
-  for (int i = disp_ctrl_ptr->start_index_; i < disp_ctrl_ptr->data_length_;)  //数据行遍历
+  for (int i = disp_ctrl_ptr->start_index_; i < data_mat2D.size();)  //数据行遍历
   {
     //键盘控制
     if (!disp_ctrl_ptr->KeyboardCtrl(i)) break;
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
     //数据获取
     string local_time = disp_ctrl_ptr->getLogTimestamp(i);
-    auto data_row = disp_ctrl_ptr->data_mat_[i];
-    auto filted_bp = disp_ctrl_ptr->LowPassFilter01(data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)],0.1);
+    auto data_row = data_mat2D[i];
+    auto filted_bp = Math::LowPassFilter(data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)],0.1);  //NOTE: staic params
     data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)] = filted_bp;
     auto brake_gain = observer.estimateBrakeGain(data_row[static_cast<int>(DataIndex::SPEED)],
                                                  data_row[static_cast<int>(DataIndex::ACC_MES)],

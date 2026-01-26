@@ -1,8 +1,13 @@
 #include "function/ros_topic_parser.h"
 #include <ros/package.h>
 
+namespace func {
+namespace msg_parser {
+
 // 设置一个最小阈值，小于该值就写0
 const float MIN_WRITE_VALUE = 1e-10f;
+float TS = 0.05f;
+
 MsgParser::MsgParser() {
     // 获取包的路径
     std::string package_path = ros::package::getPath("offline_ros");
@@ -17,7 +22,7 @@ MsgParser::MsgParser() {
     }
     // 可选：写入CSV表头
     csv_file_ << "timestamp,\
-                  SWA,\      
+                  SWA,\
                   SWT,\
                   WHEEL_SPEED,\
                   YAW_RATE,\
@@ -56,6 +61,13 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
         // 提取数据
         {
             std::lock_guard<std::mutex> lock(data_mutex_);
+            //steering wheel angle speed calculation
+            if(first_flag_){
+                first_flag_ = false;
+            }else{
+                swa_dot_ = (dbw_report.steering_report().steering_wheel_angle() - record_data_[static_cast<int>(DataIndex::SWA)]) / TS;
+            }
+            // realtime data
             record_data_[static_cast<int>(DataIndex::SWA)] = dbw_report.steering_report().steering_wheel_angle();
             record_data_[static_cast<int>(DataIndex::SWT)] = dbw_report.steering_report().steering_wheel_torque();
             record_data_[static_cast<int>(DataIndex::WHEEL_SPEED)] = dbw_report.wheel_speed_report().front_axle_speed();
@@ -136,7 +148,8 @@ VehicleSteerData MsgParser::getVehicleSteerData() {
             record_data_[static_cast<int>(DataIndex::SWA)],
             record_data_[static_cast<int>(DataIndex::SWT)],
             record_data_[static_cast<int>(DataIndex::WHEEL_SPEED)],
-            record_data_[static_cast<int>(DataIndex::YAW_RATE)]};
+            record_data_[static_cast<int>(DataIndex::YAW_RATE)],
+            swa_dot_};
 }
 
 VehicleBrakeData MsgParser::getVehicleBrakeData() {
@@ -149,3 +162,6 @@ VehicleBrakeData MsgParser::getVehicleBrakeData() {
             record_data_[static_cast<int>(DataIndex::PITCH)],
             record_data_[static_cast<int>(DataIndex::BRAKE_PRESSURE)]};
 }
+
+}
+} // namespace name

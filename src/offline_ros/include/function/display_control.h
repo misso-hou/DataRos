@@ -27,12 +27,10 @@ class DisplayControl
 
     public:
         /*读csv数据函数*/
-        float LowPassFilter01(const float& data,const float& alpha);
-        float LowPassFilter02(const float& data,const float& alpha);
         vector<vector<float>> RowDataReader(string file_name, vector<long long>& time, int row_num, int bias_index);
         string getLogTimestamp(const int index);
         void SetParam(int argc, char *argv[]);
-        void ExtractData();
+        mesh2D ExtractData();
         // 按键控制相关函数
         char GetKey();
         string GetKeyWithTimeout(int timeout_ms);
@@ -47,13 +45,12 @@ class DisplayControl
         //低通滤波
         float filtered_data01_ = 0.0;
         float filtered_data02_ = 0.0;
+        int data_length_;
 
     public:
         //变量定义
         int cycle_time_;
-        int data_length_;
         int start_index_;
-        mesh2D data_mat_;
         bool back_;
         bool erase_;
 };

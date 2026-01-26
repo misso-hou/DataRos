@@ -26,31 +26,6 @@ namespace Anim = modules::animation;
 namespace AlgWW = ALG::WeightedWindows;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 
-float LowPassFilter01(const float& data,const float& alpha) {
-  static bool first_flag = true;
-  static float filtered_data = 0.0;
-
-  if (first_flag) {  // first time enter
-    first_flag = false;
-    filtered_data = data;
-  } else {
-    filtered_data = alpha * data + (1.0f - alpha) * filtered_data;
-  }
-  return filtered_data;
-}
-
-float LowPassFilter02(const float& data,const float& alpha) {
-  static bool first_flag = true;
-  static float filtered_data = 0.0;
-
-  if (first_flag) {  // first time enter
-    first_flag = false;
-    filtered_data = data;
-  } else {
-    filtered_data = alpha * data + (1.0f - alpha) * filtered_data;
-  }
-  return filtered_data;
-}
 
 /*
  * ---------数据回放使用方法----------：
@@ -65,26 +40,24 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "realtime_module");
   ros::NodeHandle nh;
   // 创建监听器对象
-  MsgParser msg_parser;
+  func::msg_parser::MsgParser msg_parser;
   AlgWW::WeightedWindows windows(2000,400);
   pybind11::scoped_interpreter guard{};
   Animator->InitWeightedWindowsPlt();
   //主程序线程
-  ros::Rate rt(50);
+  ros::Rate rt(20);
   while (ros::ok()) {
     ros::spinOnce();
     auto realtime_data = msg_parser.getVehicleSteerData();
-    auto filter_torque01 = LowPassFilter01(realtime_data.steer_wheel_torque,0.05);
-    auto filter_torque02 = LowPassFilter02(realtime_data.steer_wheel_torque,0.1);
     vector<float> data_row(4);
     data_row[0] = realtime_data.steer_wheel_angle;
-    data_row[1] = realtime_data.steer_wheel_torque;
+    data_row[1] = realtime_data.steer_wheel_torque_filtered;
     data_row[2] = realtime_data.wheel_speed;
     data_row[3] = realtime_data.yaw_rate;
-    data_row.push_back(filter_torque01);
-    data_row.push_back(filter_torque02);
-    data_row[0]*=2;
-    auto mode = windows.getWeightedMode(filter_torque02,data_row[2],data_row[0]);
+    data_row[4] = realtime_data.steer_wheel_angle_dot;
+    auto mode = windows.getWeightedMode(realtime_data.steer_wheel_torque_filtered,
+                                        realtime_data.wheel_speed,
+                                        realtime_data.yaw_rate);
     data_row.push_back(mode);
     Animator->SetSteerWheelData(data_row);
     /*------动画显示-----*/

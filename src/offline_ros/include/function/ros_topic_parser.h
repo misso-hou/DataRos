@@ -9,13 +9,18 @@
 // 包含已编译的protobuf头文件
 #include "plusai_common_proto/control/dbw_reports.pb.h"
 #include "plusai_common_proto/control/control_command.pb.h"
+namespace func {
+namespace msg_parser {
+
+extern float TS;
 
 struct VehicleSteerData {
     std::string local_time;
     float steer_wheel_angle;
-    float steer_wheel_torque;
+    float steer_wheel_torque_filtered;
     float wheel_speed;
     float yaw_rate;
+    float steer_wheel_angle_dot;
 };
 
 struct VehicleBrakeData {
@@ -40,6 +45,12 @@ enum class DataIndex{
     PITCH,
     BRAKE_PRESSURE
 };
+
+template <typename E>
+constexpr auto to_int(E e) noexcept {
+    static_assert(std::is_enum<E>::value, "to_int only works with enum types");
+    return static_cast<typename std::underlying_type<E>::type>(e);
+}
 
 class MsgParser {
     public:
@@ -66,4 +77,9 @@ class MsgParser {
     private:   // 数据成员变量
         std::string local_time_;
         std::vector<float> record_data_;
+        float swa_dot_ = 0.0;
+        bool first_flag_ = true;
 };
+
+}
+}

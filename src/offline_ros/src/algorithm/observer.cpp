@@ -10,14 +10,17 @@ using VectorXt = Matrix<T, N, 1>;
 
 //********************************************纵向力观测器********************************************/
 /**
- * step01->estimate brake gain(RLS)[RLS又需要用到纵向力去迭代估计]
- * step02->calculate brake torque(brake pressure*brake gain)
+ * step01->estimate brake gain(RLS)[RLS又需要用到纵向力去迭代估计]  ---- 已完成
+ * step02->calculate brake torque(brake pressure*brake gain)    ---- 
  * step03->observer estimate wheel force Fx
  * step04->estimate acceleration compensation factor(RLS) [补偿ebs控制器造成的加速度误差],适当降低任务难度,可以先辨识刹车性能下降
  */
 
 /**
  * @brief:initilize luenber observer(wheel longitudinal force observer)
+ *  * state space：
+ *     |F(k+1)|   |    1      0|     |F(k)|     |   0  |
+ *     |w(k+1)| = |-R*ts/I_w  1|  ×  |W(k)|  +  |ts/I_w| + |Kb * P|
  */
 void BrakeTorqueObserver::initBrakeObserver(){
     //TODO:set vehicle params
@@ -33,13 +36,16 @@ void BrakeTorqueObserver::initBrakeObserver(){
     model_params_.front_area = 10.0;
     model_params_.rolling_friction_coeff = 0.007;
     model_params_.mass = 29000.0;
-    //state space matrices
+    //A matrix
     mat_a_ = Eigen::MatrixXd::Zero(2,2);
-    mat_b_ = Eigen::MatrixXd::Zero(2,1);
-    mat_c_ = Eigen::MatrixXd::Zero(2,2);
     mat_a_(0,0) = 1.0;
     mat_a_(1,0) = -model_params_.wheel_radius * model_params_.ts/model_params_.wheel_inertia;
+    mat_a_(1,1) = 1.0;
+    //B matrix
+    mat_b_ = Eigen::MatrixXd::Zero(2,1);
     mat_b_(1,0) = model_params_.ts/model_params_.wheel_inertia;
+    //C matrix
+    mat_c_ = Eigen::MatrixXd::Zero(2,2);
     mat_c_(1,1) = 1.0;
     mat_L_ = Eigen::MatrixXd::Zero(2,1);
     mat_L_(0,0) = -500;
@@ -55,19 +61,19 @@ void BrakeTorqueObserver::initBrakeObserver(){
 
 /**
  * @brief:propogate the state space model
- * wheel dynamic-> I*omege_w_dot - R*Fx + T_brake = 0
- * state->(Fx,omega_wheel,)
+ * wheel dynamic-> I*omege_w_dot - R_w*Fx + T_brake = 0
+ * state space->|X(k+1)| = A*X(k) + B*U(k)：
+ *     |F(k+1)|   |    1      0|     |F(k)|     |   0  |
+ *     |w(k+1)| = |-R*ts/I_w  1|  ×  |W(k)|  +  |ts/I_w| + |Kb * P|
+ * Y(K) = C*X(k):
+ *     []
  */
 void BrakeTorqueObserver::stateUpdate(const double& pressure,
                                       const double& acceleration,
                                       const double& wheel_speed){
     //step0->update measurement
     y_mes_(1,0) = wheel_speed;                                  
-    //step1->update state space matrices(time invariant,ignore)
-    mat_a_(0,0) = 1.0;
-    mat_a_(1,0) = -model_params_.wheel_radius * model_params_.ts/model_params_.wheel_inertia;
-    mat_b_(1,0) = model_params_.ts/model_params_.wheel_inertia;
-    mat_c_(1,1) = 1.0;
+    //step1->update state space matrices(A,B,C matrices is time invariant,ignored)
     //step2->first order approximation of ODE                                    
     double brake_torque = brake_gain_ * pressure;
     auto y_error = y_mes_ - mat_c_ * x_hat_;

@@ -237,40 +237,14 @@ void DisplayControl::SetParam(int argc, char *argv[]) {
 /**
  *@brief:csv数据提取
  */
-void DisplayControl::ExtractData() {
+mesh2D DisplayControl::ExtractData() {
   // 从当前工作目录出发
   std::string data_file = "src/offline_ros/data/record_data02.csv";  // 相对当前目录
   std::cout << "数据文件: " << data_file << std::endl;
   //数据提取
-  data_mat_ = RowDataReader(data_file, ts_, 1, 1);
-  data_length_ = data_mat_.size();
-}
-
-
-float DisplayControl::LowPassFilter01(const float& data,const float& alpha) {
-  static bool first_flag = true;
-  static float filtered_data = 0.0;
-
-  if (first_flag) {  // first time enter
-    first_flag = false;
-    filtered_data = data;
-  } else {
-    filtered_data = alpha * data + (1.0f - alpha) * filtered_data;
-  }
-  return filtered_data;
-}
-
-float DisplayControl::LowPassFilter02(const float& data,const float& alpha) {
-  static bool first_flag = true;
-  static float filtered_data = 0.0;
-
-  if (first_flag) {  // first time enter
-    first_flag = false;
-    filtered_data = data;
-  } else {
-    filtered_data = alpha * data + (1.0f - alpha) * filtered_data;
-  }
-  return filtered_data;
+  auto data_mat2D = RowDataReader(data_file, ts_, 1, 1);
+  data_length_ = data_mat2D.size();
+  return data_mat2D;
 }
 
 string DisplayControl::getLogTimestamp(const int index){
