@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   ALG::BrakeTorqueObserver observer;
   pybind11::scoped_interpreter guard{};
   disp_ctrl_ptr->SetParam(argc, argv);
-  auto data_mat2D = disp_ctrl_ptr->ExtractData();
+  auto data_mat2D = disp_ctrl_ptr->ExtractData(argc, argv);
   Animator->InitBrakeSysPlt();
   for (int i = disp_ctrl_ptr->start_index_; i < data_mat2D.size();)  //数据行遍历
   {

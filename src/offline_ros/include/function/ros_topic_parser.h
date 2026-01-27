@@ -55,7 +55,7 @@ constexpr auto to_int(E e) noexcept {
 
 class MsgParser {
     public:
-        MsgParser();
+        MsgParser(int argc, char *argv[]);
         ~MsgParser();
 
     public:

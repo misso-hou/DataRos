@@ -30,7 +30,7 @@ class DisplayControl
         vector<vector<float>> RowDataReader(string file_name, vector<long long>& time, int row_num, int bias_index);
         string getLogTimestamp(const int index);
         void SetParam(int argc, char *argv[]);
-        mesh2D ExtractData();
+        mesh2D ExtractData(int argc, char *argv[]);
         // 按键控制相关函数
         char GetKey();
         string GetKeyWithTimeout(int timeout_ms);

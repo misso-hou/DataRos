@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "brake_realtime_module");
   ros::NodeHandle nh;
   // 创建监听器对象
-  func::msg_parser::MsgParser msg_parser;
+  func::msg_parser::MsgParser msg_parser(argc, argv);
   ALG::BrakeTorqueObserver observer;
   pybind11::scoped_interpreter guard{};
   Animator->InitBrakeSysPlt();

@@ -11,11 +11,17 @@ namespace Math = toolbox::math;
 const float MIN_WRITE_VALUE = 1e-10f;
 float TS = 0.05f;
 
-MsgParser::MsgParser() {
+MsgParser::MsgParser(int argc, char *argv[]) {
     // 获取包的路径
     std::string package_path = ros::package::getPath("offline_ros");
     // 构造绝对路径
-    csv_file_path_ = package_path + "/data/record_data02.csv";
+    std::string filename;
+    if(argc <2){
+      throw std::runtime_error("!!!!INPUT CSV FILE NAME!!!!");
+    }else {
+      filename = argv[1];
+    }
+    csv_file_path_ = package_path + "/data/" + filename + ".csv";
     // 打开CSV文件，清空原有内容（相当于Python中的'w'模式）
     csv_file_.open(csv_file_path_.c_str());
     if (!csv_file_.is_open())

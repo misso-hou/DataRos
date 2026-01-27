@@ -225,21 +225,27 @@ bool DisplayControl::KeyboardCtrl(int &index) {
 
 void DisplayControl::SetParam(int argc, char *argv[]) {
   //文件路径配置
-  char currentPath[FILENAME_MAX];
-  getcwd(currentPath, sizeof(currentPath));
-  string current_path = string(currentPath);
+  // char currentPath[FILENAME_MAX];
+  // getcwd(currentPath, sizeof(currentPath));
+  // string current_path = string(currentPath);
   // 设置播放速度(默认周期20ms)
-  cycle_time_ = argc >= 2 ? stoi(argv[1]) : 10;
+  cycle_time_ = argc >= 3 ? stoi(argv[2]) : 10;
   // 播放位置设置（tick累计)
-  start_index_ = argc >= 3 ? atoi(argv[2]) : 0;
+  start_index_ = argc >= 4 ? atoi(argv[3]) : 0;
 }
 
 /**
  *@brief:csv数据提取
  */
-mesh2D DisplayControl::ExtractData() {
+mesh2D DisplayControl::ExtractData(int argc, char *argv[]) {
+  string filename;
+  if(argc <2){
+    throw std::runtime_error("!!!!INPUT CSV FILE NAME!!!!");
+  }else {
+    filename = argv[1];
+  }
   // 从当前工作目录出发
-  std::string data_file = "src/offline_ros/data/record_data02.csv";  // 相对当前目录
+  std::string data_file = "src/offline_ros/data/" + filename + ".csv";  // 相对当前目录
   std::cout << "数据文件: " << data_file << std::endl;
   //数据提取
   auto data_mat2D = RowDataReader(data_file, ts_, 1, 1);

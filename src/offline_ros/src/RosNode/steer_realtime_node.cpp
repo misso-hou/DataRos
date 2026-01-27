@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "steer_realtime_module");
   ros::NodeHandle nh;
   // 创建监听器对象
-  func::msg_parser::MsgParser msg_parser;
+  func::msg_parser::MsgParser msg_parser(argc, argv);
   AlgWW::WeightedWindows windows(2000,400);
   pybind11::scoped_interpreter guard{};
   Animator->InitWeightedWindowsPlt();

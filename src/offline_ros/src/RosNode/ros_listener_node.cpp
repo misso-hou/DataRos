@@ -1,13 +1,13 @@
 #include "function/ros_topic_parser.h"
 #include <ros/ros.h>
 
-int main(int argc, char** argv)
+int main(int argc, char *argv[])
 {
     // 初始化ROS节点
     ros::init(argc, argv, "dbw_reports_listener");
     
     // 创建监听器对象
-    func::msg_parser::MsgParser msg_parser;
+    func::msg_parser::MsgParser msg_parser(argc, argv);
 
     ROS_INFO("ROS listener started, waiting for messages on /vehicle/dbw_reports...");
     
