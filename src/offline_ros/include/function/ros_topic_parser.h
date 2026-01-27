@@ -78,6 +78,7 @@ class MsgParser {
         std::string local_time_;
         std::vector<float> record_data_;
         float swa_dot_ = 0.0;
+        float swt_filtered_ = 0.0;
         bool first_flag_ = true;
 };
 

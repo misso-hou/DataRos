@@ -118,25 +118,33 @@ void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x
   data_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);
   auto data_gs = GridSpec(4, 1);  
 
+  auto gs = data_figure_ptr_->add_gridspec(4, 1,
+                                            Kwargs("left"_a = 0.03, "right"_a = 0.99,
+                                                  "bottom"_a = 0.01, "top"_a = 0.97,
+                                                  "wspace"_a = 0.1, "hspace"_a = 0.15));
+
   //axes01
-  auto axes_obj_01 = figure.add_subplot(Args(data_gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "gray"));           
+  auto axes_obj_01 = figure.add_subplot(Args(gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "gray"));           
   data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);    
   data_axes01_ptr_->set_xlim(Args(-0.3f, x_axis_range));
-  data_axes01_ptr_->set_ylim(Args(-5.0, 5.0));   
+  data_axes01_ptr_->set_ylim(Args(-5.0, 5.0));
+  data_axes01_ptr_->set_xticklabels(Args(py::list()));
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   //axes02
-  auto axes_obj_02 = figure.add_subplot(Args(data_gs(2,0).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
+  auto axes_obj_02 = figure.add_subplot(Args(gs(2,0).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
   data_axes02_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_02);    
   data_axes02_ptr_->set_xlim(Args(-0.3f, x_axis_range));
   data_axes02_ptr_->set_ylim(Args(-1, 30));   
+  data_axes02_ptr_->set_xticklabels(Args(py::list()));
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   //axes03
-  auto axes_obj_03 = figure.add_subplot(Args(data_gs(3,0).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
+  auto axes_obj_03 = figure.add_subplot(Args(gs(3,0).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
   data_axes03_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_03);    
   data_axes03_ptr_->set_xlim(Args(-0.3f, x_axis_range));
-  data_axes03_ptr_->set_ylim(Args(-0.5, 0.5));   
+  data_axes03_ptr_->set_ylim(Args(-0.5, 0.5));  
+  data_axes03_ptr_->set_xticklabels(Args(py::list())); 
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   // data_axes01_ptr_->unwrap().attr("set_axis_off")();
@@ -239,15 +247,15 @@ void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
     }
   }
   /*step03->artist实时数据更新并绘制*/
-  for (int j = 0; j < lines_artist.size(); j++) {
-    lines_artist[j].attr("set_data")(time_array, line_data[j]);
-    if(j<2 || j>=4){
-      data_axes01_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
+  for (int i = 0; i < lines_artist.size(); i++) {
+    lines_artist[i].attr("set_data")(time_array, line_data[i]);
+    if(i==0 || i==1 || i==4 || i==5){
+      data_axes01_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
     }
-    else if(j==2){
-      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
-    }else if(j==3){
-      data_axes03_ptr_->unwrap().attr("draw_artist")(lines_artist[j]);
+    else if(i==2){
+      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
+    }else if(i==3){
+      data_axes03_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
     }
   }
   data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);

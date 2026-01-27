@@ -4,7 +4,7 @@
 namespace toolbox {
 namespace math {
 
-float LowPassFilter(const float& data,const float& alpha) {
+inline float LowPassFilter(const float& data,const float& alpha) {
   static bool first_flag = true;
   static float filtered_data = 0.0;
 

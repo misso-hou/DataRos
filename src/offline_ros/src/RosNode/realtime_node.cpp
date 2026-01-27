@@ -49,12 +49,12 @@ int main(int argc, char *argv[]) {
   while (ros::ok()) {
     ros::spinOnce();
     auto realtime_data = msg_parser.getVehicleSteerData();
-    vector<float> data_row(4);
-    data_row[0] = realtime_data.steer_wheel_angle;
-    data_row[1] = realtime_data.steer_wheel_torque_filtered;
-    data_row[2] = realtime_data.wheel_speed;
-    data_row[3] = realtime_data.yaw_rate;
-    data_row[4] = realtime_data.steer_wheel_angle_dot;
+    vector<float> data_row(5);
+    data_row.at(0) = realtime_data.steer_wheel_angle;
+    data_row.at(1) = realtime_data.steer_wheel_torque_filtered;
+    data_row.at(2) = realtime_data.wheel_speed;
+    data_row.at(3) = realtime_data.yaw_rate;
+    data_row.at(4) = realtime_data.steer_wheel_angle_dot;
     auto mode = windows.getWeightedMode(realtime_data.steer_wheel_torque_filtered,
                                         realtime_data.wheel_speed,
                                         realtime_data.yaw_rate);
