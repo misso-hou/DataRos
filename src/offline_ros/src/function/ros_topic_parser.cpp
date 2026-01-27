@@ -67,20 +67,21 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
             //steering wheel angle speed calculation
             if(first_flag_){
                 first_flag_ = false;
+                swt_filtered_ = record_data_[to_int(DataIndex::SWT)];
+                brake_pressure_filtered_ = record_data_[to_int(DataIndex::BRAKE_PRESSURE)];
             }else{
-                swa_dot_ = (dbw_report.steering_report().steering_wheel_angle() - record_data_[static_cast<int>(DataIndex::SWA)]) / TS;
-                std::cout << "debug->current angle:" << dbw_report.steering_report().steering_wheel_angle() << "; last angle:" << record_data_[static_cast<int>(DataIndex::SWA)] <<
-                             "; angle rate:" << swa_dot_ << std::endl;
+                swa_dot_ = (dbw_report.steering_report().steering_wheel_angle() - record_data_[to_int(DataIndex::SWA)]) / TS;
             }
             // realtime data
-            record_data_[static_cast<int>(DataIndex::SWA)] = dbw_report.steering_report().steering_wheel_angle();
-            record_data_[static_cast<int>(DataIndex::SWT)] = dbw_report.steering_report().steering_wheel_torque();
-            record_data_[static_cast<int>(DataIndex::WHEEL_SPEED)] = dbw_report.wheel_speed_report().front_axle_speed();
-            record_data_[static_cast<int>(DataIndex::YAW_RATE)] = dbw_report.vehicle_dynamic().angular_velocity().z();
-            record_data_[static_cast<int>(DataIndex::BRAKE_PRESSURE)] = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
-            record_data_[static_cast<int>(DataIndex::SPEED)] = dbw_report.steering_report().speed();
+            record_data_[to_int(DataIndex::SWA)] = dbw_report.steering_report().steering_wheel_angle();
+            record_data_[to_int(DataIndex::SWT)] = dbw_report.steering_report().steering_wheel_torque();
+            record_data_[to_int(DataIndex::WHEEL_SPEED)] = dbw_report.wheel_speed_report().front_axle_speed();
+            record_data_[to_int(DataIndex::YAW_RATE)] = dbw_report.vehicle_dynamic().angular_velocity().z();
+            record_data_[to_int(DataIndex::BRAKE_PRESSURE)] = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
+            record_data_[to_int(DataIndex::SPEED)] = dbw_report.steering_report().speed();
             // for display and calculation
-            swt_filtered_ = Math::LowPassFilter(record_data_[static_cast<int>(DataIndex::SWT)],0.05);
+            swt_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::SWT)],swt_filtered_,0.05);
+            brake_pressure_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::BRAKE_PRESSURE)],brake_pressure_filtered_,0.05);
         }
 
         // 提取→转秒→转时间
@@ -185,7 +186,8 @@ VehicleBrakeData MsgParser::getVehicleBrakeData() {
             record_data_[static_cast<int>(DataIndex::ACC_REF)],
             record_data_[static_cast<int>(DataIndex::SPEED)],
             record_data_[static_cast<int>(DataIndex::PITCH)],
-            record_data_[static_cast<int>(DataIndex::BRAKE_PRESSURE)]};
+            brake_pressure_filtered_,
+            record_data_[static_cast<int>(DataIndex::WHEEL_SPEED)]};
 }
 
 }

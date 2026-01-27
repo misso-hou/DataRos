@@ -30,7 +30,8 @@ struct VehicleBrakeData {
     float acc_ref;
     float speed;
     float pitch;
-    float brake_pressure;
+    float brake_pressure_filtered;
+    float wheel_speed;
 };
 
 enum class DataIndex{
@@ -77,9 +78,12 @@ class MsgParser {
     private:   // 数据成员变量
         std::string local_time_;
         std::vector<float> record_data_;
+        bool first_flag_ = true;
+    
+    private:  // 后处理数据
         float swa_dot_ = 0.0;
         float swt_filtered_ = 0.0;
-        bool first_flag_ = true;
+        float brake_pressure_filtered_ = 0.0;
 };
 
 }

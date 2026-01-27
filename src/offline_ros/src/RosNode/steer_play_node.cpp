@@ -47,18 +47,25 @@ int main(int argc, char *argv[]) {
     //键盘控制
     if (!disp_ctrl_ptr->KeyboardCtrl(i)) break;
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
-    //数据处理
-    auto& swt_filtered = data_mat2D[i][to_int(DataIndex::SWT)];
-    swt_filtered = Math::LowPassFilter(swt_filtered,0.05);
-    float swa_dot = i <= 1 ? 0 : 
-                    (data_mat2D[i][to_int(DataIndex::SWA)] - data_mat2D[i-1][to_int(DataIndex::SWA)]) / TS;
-    // 获取前5个数据
-    auto data_row = std::vector<float>(data_mat2D[i].begin(),data_mat2D[i].begin() + 4);
     string local_time = disp_ctrl_ptr->getLogTimestamp(i);
-    data_row.push_back(swa_dot);
-    auto mode = windows.getWeightedMode(swt_filtered,data_row[to_int(DataIndex::WHEEL_SPEED)],data_row[to_int(DataIndex::SWA)]);
-    data_row.push_back(mode);
-    Animator->SetSteerWheelData(data_row);
+    auto data_row = data_mat2D[i];
+    //数据处理
+    static float swt_filtered = data_row.at(to_int(DataIndex::SWT));
+    swt_filtered = Math::LowPassFilter(data_row.at(to_int(DataIndex::SWT)),swt_filtered,0.05);
+    float swa_dot = i <= 1 ? 0 : 
+                    (data_row.at(to_int(DataIndex::SWA)) - data_mat2D[i-1][to_int(DataIndex::SWA)]) / TS;
+    // 获取前5个数据
+    vector<float> plt_data(6);
+    plt_data.at(0) = data_row.at(to_int(DataIndex::SWA));
+    plt_data.at(1) = swt_filtered;
+    plt_data.at(2) = data_row.at(to_int(DataIndex::WHEEL_SPEED));
+    plt_data.at(3) = data_row.at(to_int(DataIndex::YAW_RATE));
+    plt_data.at(4) = swa_dot;
+    auto mode = windows.getWeightedMode(swt_filtered,
+                                        data_row.at(to_int(DataIndex::WHEEL_SPEED)),
+                                        data_row.at(to_int(DataIndex::SWA)));
+    plt_data.at(5) = mode;
+    Animator->SetSteerWheelData(plt_data);
     /*------动画显示-----*/
     Animator->SWTorqueMonitor(600,local_time);
     auto freq01 = windows.GetLongFreqency();

@@ -4,16 +4,8 @@
 namespace toolbox {
 namespace math {
 
-inline float LowPassFilter(const float& data,const float& alpha) {
-  static bool first_flag = true;
-  static float filtered_data = 0.0;
-
-  if (first_flag) {  // first time enter
-    first_flag = false;
-    filtered_data = data;
-  } else {
-    filtered_data = alpha * data + (1.0f - alpha) * filtered_data;
-  }
+inline float LowPassFilter(const float& new_data, const float& old_data, const float& alpha) {
+  auto filtered_data = alpha * new_data + (1.0f - alpha) * old_data;
   return filtered_data;
 }
 

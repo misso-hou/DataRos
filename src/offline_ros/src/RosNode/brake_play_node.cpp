@@ -46,15 +46,21 @@ int main(int argc, char *argv[]) {
     //数据获取
     string local_time = disp_ctrl_ptr->getLogTimestamp(i);
     auto data_row = data_mat2D[i];
-    auto filted_bp = Math::LowPassFilter(data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)],0.1);  //NOTE: staic params
-    data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)] = filted_bp;
-    auto brake_gain = observer.estimateBrakeGain(data_row[static_cast<int>(DataIndex::SPEED)],
-                                                 data_row[static_cast<int>(DataIndex::ACC_MES)],
-                                                 data_row[static_cast<int>(DataIndex::BRAKE_PRESSURE)]);                                          
-    data_row.at(static_cast<int>(DataIndex::BRAKE_PRESSURE)) *= -0.01; //note:可视化
-    auto plt_data = std::vector<float>(data_row.begin()+4,data_row.end());
-    plt_data.push_back(data_row.at(static_cast<int>(DataIndex::WHEEL_SPEED)));
-    plt_data.push_back(brake_gain*0.01);
+    static float filtered_bp = data_row[to_int(DataIndex::BRAKE_PRESSURE)];
+    filtered_bp = Math::LowPassFilter(data_row[to_int(DataIndex::BRAKE_PRESSURE)],filtered_bp,0.1);
+    data_row[to_int(DataIndex::BRAKE_PRESSURE)] = filtered_bp;
+    auto brake_gain = observer.estimateBrakeGain(data_row[to_int(DataIndex::SPEED)],
+                                                 data_row[to_int(DataIndex::ACC_MES)],
+                                                 data_row[to_int(DataIndex::BRAKE_PRESSURE)]);                                          
+    vector<float> plt_data(8);
+    plt_data.at(0) = data_row.at(to_int(DataIndex::EBS_CMD));
+    plt_data.at(1) = data_row.at(to_int(DataIndex::ACC_MES));
+    plt_data.at(2) = data_row.at(to_int(DataIndex::ACC_REF));
+    plt_data.at(3) = data_row.at(to_int(DataIndex::SPEED));
+    plt_data.at(4) = data_row.at(to_int(DataIndex::PITCH));
+    plt_data.at(5) = data_row.at(to_int(DataIndex::BRAKE_PRESSURE))*(-0.01);
+    plt_data.at(6) = data_row.at(to_int(DataIndex::WHEEL_SPEED));
+    plt_data.at(7) = brake_gain*(0.01);
     Animator->SetBrakeData(plt_data);
     /*------动画显示-----*/
     Animator->BrakeMonitor(600,local_time);

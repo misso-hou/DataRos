@@ -11,7 +11,7 @@
 #include "tool_box/base_time_struct.h"
 
 #include <matplotlibcpp17/pyplot.h>
-#include "algorithm/weighted_window_mode.h"
+#include "algorithm/observer.h"
 #include "tool_box/rate_controller.h"
 
 #include <algorithm>
@@ -23,7 +23,6 @@ using namespace matplotlibcpp17;
 
 using namespace std;
 namespace Anim = modules::animation;
-namespace AlgWW = ALG::WeightedWindows;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 
 
@@ -37,34 +36,33 @@ Anim::Animation *Animator = Anim::Animation::GetInstance();
  */
 int main(int argc, char *argv[]) {
   std::cout << "Main thread running..." << std::endl;
-  ros::init(argc, argv, "realtime_module");
+  ros::init(argc, argv, "brake_realtime_module");
   ros::NodeHandle nh;
   // 创建监听器对象
   func::msg_parser::MsgParser msg_parser;
-  AlgWW::WeightedWindows windows(2000,400);
+  ALG::BrakeTorqueObserver observer;
   pybind11::scoped_interpreter guard{};
-  Animator->InitWeightedWindowsPlt();
+  Animator->InitBrakeSysPlt();
   //主程序线程
   ros::Rate rt(20);
   while (ros::ok()) {
     ros::spinOnce();
-    auto realtime_data = msg_parser.getVehicleSteerData();
-    vector<float> data_row(5);
-    data_row.at(0) = realtime_data.steer_wheel_angle;
-    data_row.at(1) = realtime_data.steer_wheel_torque_filtered;
-    data_row.at(2) = realtime_data.wheel_speed;
-    data_row.at(3) = realtime_data.yaw_rate;
-    data_row.at(4) = realtime_data.steer_wheel_angle_dot;
-    auto mode = windows.getWeightedMode(realtime_data.steer_wheel_torque_filtered,
-                                        realtime_data.wheel_speed,
-                                        realtime_data.yaw_rate);
-    data_row.push_back(mode);
-    Animator->SetSteerWheelData(data_row);
+    auto realtime_data = msg_parser.getVehicleBrakeData();
+    vector<float> data_row(8);
+    data_row.at(0) = realtime_data.ebs_cmd;
+    data_row.at(1) = realtime_data.acc_mes;
+    data_row.at(2) = realtime_data.acc_ref;
+    data_row.at(3) = realtime_data.speed;
+    data_row.at(4) = realtime_data.pitch;
+    data_row.at(5) = realtime_data.brake_pressure_filtered*(-0.01);
+    data_row.at(6) = realtime_data.wheel_speed;
+    auto brake_gain = observer.estimateBrakeGain(realtime_data.speed,
+                                                 realtime_data.acc_mes,
+                                                 realtime_data.brake_pressure_filtered);   
+    data_row.at(7) = brake_gain*(0.01);
+    Animator->SetBrakeData(data_row);
     /*------动画显示-----*/
-    Animator->SWTorqueMonitor(600,realtime_data.local_time);
-    auto freq01 = windows.GetLongFreqency();
-    auto freq02 = windows.GetShortFreqency();
-    Animator->BarPlot(freq01,freq02);
+    Animator->BrakeMonitor(600,realtime_data.local_time);
     rt.sleep();
   }
   pybind11::finalize_interpreter();
