@@ -152,7 +152,7 @@ void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x
   auto axes_obj_01 = figure.add_subplot(Args(gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "gray"));           
   data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);    
   data_axes01_ptr_->set_xlim(Args(-0.3f, x_axis_range));
-  data_axes01_ptr_->set_ylim(Args(-5.0, 5.0));
+  data_axes01_ptr_->set_ylim(Args(-2.0, 2.0));
   data_axes01_ptr_->set_xticklabels(Args(py::list()));
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
@@ -252,7 +252,7 @@ void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
     }
   }
   /*step02->static artist生成*/
-  static vector<string> lables = {"SWA", "SWT", "wheel_speed", "yaw_rate", "SWA_dot", "bias_T"};
+  static vector<string> lables = {"SWA", "SWT", "wheel_speed", "yaw_rate", "SWA_dot", "bias_T","l_mean","s_mean"};
   if (once_flag) {
     once_flag = false;
     py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
@@ -265,7 +265,7 @@ void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
       else if(i==2){
         lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
         legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
-      }else if(i==3){
+      }else if(i==3 || i==6 || i==7){
         lines_artist[i] = data_axes03_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
         legend_artist[2] = data_axes03_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
       }
@@ -279,7 +279,7 @@ void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
     }
     else if(i==2){
       data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
-    }else if(i==3){
+    }else if(i==3 || i==6 || i==7){
       data_axes03_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
     }
   }

@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   ros::NodeHandle nh;
   // 创建监听器对象
   MsgParser msg_parser(argc, argv);
-  AlgWW::WeightedWindows windows(2000,400);
+  AlgWW::WeightedWindows windows(200,50);
   pybind11::scoped_interpreter guard{};
   Animator->InitWeightedWindowsPlt();
   //主程序线程
@@ -48,23 +48,26 @@ int main(int argc, char *argv[]) {
   while (ros::ok()) {
     ros::spinOnce();
     auto realtime_data = msg_parser.getVehicleSteerData();
-    vector<float> data_row(6);
-    data_row.at(0) = realtime_data.steer_wheel_angle;
-    data_row.at(1) = realtime_data.steer_wheel_torque_filtered;
-    data_row.at(2) = realtime_data.wheel_speed;
-    data_row.at(3) = realtime_data.yaw_rate;
-    data_row.at(4) = realtime_data.steer_wheel_angle_dot;
+    vector<float> plt_data(8);
+    plt_data.at(0) = realtime_data.steer_wheel_angle;
+    plt_data.at(1) = realtime_data.steer_wheel_torque_filtered;
+    plt_data.at(2) = realtime_data.wheel_speed;
+    plt_data.at(3) = realtime_data.yaw_rate;
+    plt_data.at(4) = realtime_data.steer_wheel_angle_dot;
+    bool pilot_state = static_cast<bool>(realtime_data.pilot_state);
     auto mode = windows.getWeightedMode(realtime_data.steer_wheel_torque_filtered,
                                         realtime_data.wheel_speed,
-                                        realtime_data.yaw_rate);
-    data_row.at(5) = mode;
-    Animator->SetSteerWheelData(data_row);
+                                        realtime_data.yaw_rate,
+                                        pilot_state);
+    plt_data.at(5) = mode;
+    plt_data.at(6) = windows.getLongMean();
+    plt_data.at(7) = windows.getShortMean();
+    Animator->SetSteerWheelData(plt_data);
     /*------动画显示-----*/
     Animator->SWTorqueMonitor(600,realtime_data.local_time);
-    auto freq01 = windows.GetLongFreqency();
-    auto freq02 = windows.GetShortFreqency();
+    auto freq01 = windows.getLongFreqency();
+    auto freq02 = windows.getShortFreqency();
     Animator->BarPlot(freq01,freq02);
-    bool pilot_state = static_cast<bool>(realtime_data.pilot_state);
     Animator->SteeringWheelMonitor(realtime_data.steer_wheel_angle,pilot_state);
     rt.sleep();
   }

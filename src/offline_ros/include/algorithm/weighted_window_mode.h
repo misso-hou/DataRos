@@ -21,30 +21,35 @@ const float BIAS_THD = 1.5f;
 struct MovingWindow
 {
     int size;
-    std::deque<int> data;
+    std::deque<float> data;
     std::unordered_map<int, int> frequency;
     float mode;
+    float mean;
 };
 
 class WeightedWindows {
 public:
     WeightedWindows(int long_size,int short_size);
     float getWeightedMode(const float& torque,
-                           const float& speed,
-                           const float& yaw);
-    std::unordered_map<int, int> GetLongFreqency(){return long_window_.frequency;}    
-    std::unordered_map<int, int> GetShortFreqency(){return short_window_.frequency;}                 
+                          const float& speed,
+                          const float& yaw,
+                          const bool pilot);
+    std::unordered_map<int, int> getLongFreqency(){return long_window_.frequency;}    
+    std::unordered_map<int, int> getShortFreqency(){return short_window_.frequency;}
+    float getLongMean(){return long_window_.mean;}    
+    float getShortMean(){return short_window_.mean;}                        
 
 private:
     bool segmentData(const float& speed,const float& angle);
+    bool segmentData(const bool pilot);
     void updateWindow(MovingWindow& window,const float& new_data);
-    void calWindowMode(MovingWindow& window);
+    void calLongWindowMode(MovingWindow& window);
     void calShortWindowMode(MovingWindow& window);
     float computeWeightedMode();
 
 private:
     float last_result_;
-    bool update_flag_;
+    bool update_flag_ = false;
 
 private: // tuneable parameters
     MovingWindow long_window_;
@@ -70,29 +75,36 @@ inline bool WeightedWindows::segmentData(const float& speed,const float& angle){
     return update;
 }
 
+inline bool WeightedWindows::segmentData(const bool pilot){
+    bool update = false;
+    if(pilot){
+        update = true;
+    }
+    return update;
+}
+
 inline void WeightedWindows::updateWindow(MovingWindow& window,
                                           const float& new_data) {
-
     if (window.data.size() >= window.size && window.data.size()>1) {
-        int first_group = window.data.front();
+        float first_data = window.data.front();
+        int index = static_cast<int>(std::round(first_data/RESOLUTION)); //NOTE:index计算
         window.data.pop_front();
-        window.frequency[first_group]--;
-        if (window.frequency[first_group] == 0) {
-            window.frequency.erase(first_group);
+        window.frequency[index]--;
+        if (window.frequency[index] == 0) {
+            window.frequency.erase(index);
         }
     }
     int new_group = static_cast<int>(std::round(new_data/RESOLUTION));
-    window.data.push_back(new_group);
+    window.data.push_back(new_data);
     window.frequency[new_group]++;
 }
 
-
-inline void WeightedWindows::calWindowMode(MovingWindow& window) {
+inline void WeightedWindows::calLongWindowMode(MovingWindow& window) {
     if (window.data.empty()) return;
-    // 找到出现频率最高的元素
-    float mode = window.data.front()*RESOLUTION;
-    int max_count = window.frequency[window.data.front()];
-
+    // 众数计算(找到出现频率最高的元素)
+    float mode = window.data.front();
+    int index = static_cast<int>(std::round(mode/RESOLUTION)); //NOTE:index计算
+    int max_count = window.frequency[index];
     for (const auto& pair : window.frequency) {
         if (pair.second > max_count) {
             mode = pair.first*RESOLUTION;
@@ -100,6 +112,9 @@ inline void WeightedWindows::calWindowMode(MovingWindow& window) {
         }
     }
     window.mode = mode;
+    // 均值计算
+    float sum = std::accumulate(window.data.begin(), window.data.end(), 0.0f);
+    window.mean = sum / static_cast<float>(window.data.size());
 }
 
 inline void WeightedWindows::calShortWindowMode(MovingWindow& window) {
@@ -132,6 +147,9 @@ inline void WeightedWindows::calShortWindowMode(MovingWindow& window) {
         }
     }
     window.mode = mode;
+    // 均值计算
+    float sum = std::accumulate(window.data.begin(), window.data.end(), 0.0f);
+    window.mean = sum / static_cast<float>(window.data.size());
 }
 
 
@@ -156,19 +174,20 @@ inline float WeightedWindows::computeWeightedMode() {
 }
 
 inline float WeightedWindows::getWeightedMode(const float& torque,
-                                       const float& speed,
-                                       const float& angle) {
+                                              const float& speed,
+                                              const float& angle,
+                                              const bool pilot) {
     //step01->segment data
-    bool data_update = segmentData(speed,angle);
-    update_flag_ = data_update;
-    if(!data_update) {
+    // update_flag_ = segmentData(speed,angle);
+    update_flag_ = segmentData(pilot);
+    if(!update_flag_) {
         return last_result_;
     }
 
-    if(data_update) {
+    if(update_flag_) {
         updateWindow(long_window_,torque);
         updateWindow(short_window_,torque);
-        calWindowMode(long_window_);
+        calLongWindowMode(long_window_);
         calShortWindowMode(short_window_);
     }
     //step04->compute weighted windows mode

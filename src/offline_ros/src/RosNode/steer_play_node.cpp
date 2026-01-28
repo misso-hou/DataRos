@@ -37,7 +37,7 @@ std::unique_ptr<DisplayControl> disp_ctrl_ptr = std::make_unique<DisplayControl>
  * csv文件内部默认只有一组数据
  */
 int main(int argc, char *argv[]) {
-  AlgWW::WeightedWindows windows(2000,400);
+  AlgWW::WeightedWindows windows(200,50);
   pybind11::scoped_interpreter guard{};
   disp_ctrl_ptr->SetParam(argc, argv);
   auto data_mat2D = disp_ctrl_ptr->ExtractData(argc, argv);
@@ -54,8 +54,9 @@ int main(int argc, char *argv[]) {
     swt_filtered = Math::LowPassFilter(data_row.at(to_int(DataIndex::SWT)),swt_filtered,0.05);
     float swa_dot = i <= 1 ? 0 : 
                     (data_row.at(to_int(DataIndex::SWA)) - data_mat2D[i-1][to_int(DataIndex::SWA)]) / TS;
+    bool pilot_state = static_cast<bool>(data_row.at(to_int(DataIndex::PILOT)));
     // 获取前5个数据
-    vector<float> plt_data(6);
+    vector<float> plt_data(8);
     plt_data.at(0) = data_row.at(to_int(DataIndex::SWA));
     plt_data.at(1) = swt_filtered;
     plt_data.at(2) = data_row.at(to_int(DataIndex::WHEEL_SPEED));
@@ -63,14 +64,16 @@ int main(int argc, char *argv[]) {
     plt_data.at(4) = swa_dot;
     auto mode = windows.getWeightedMode(swt_filtered,
                                         data_row.at(to_int(DataIndex::WHEEL_SPEED)),
-                                        data_row.at(to_int(DataIndex::SWA)));
+                                        data_row.at(to_int(DataIndex::SWA)),
+                                        pilot_state);
     plt_data.at(5) = mode;
-    bool pilot_state = static_cast<bool>(data_row.at(to_int(DataIndex::PILOT)));
+    plt_data.at(6) = windows.getLongMean();
+    plt_data.at(7) = windows.getShortMean();
     Animator->SetSteerWheelData(plt_data);
     /*------动画显示-----*/
     Animator->SWTorqueMonitor(600,local_time);
-    auto freq01 = windows.GetLongFreqency();
-    auto freq02 = windows.GetShortFreqency();
+    auto freq01 = windows.getLongFreqency();
+    auto freq02 = windows.getShortFreqency();
     Animator->BarPlot(freq01,freq02);
     Animator->SteeringWheelMonitor(data_row.at(to_int(DataIndex::SWA)),pilot_state);
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
