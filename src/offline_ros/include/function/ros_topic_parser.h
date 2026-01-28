@@ -21,6 +21,7 @@ struct VehicleSteerData {
     float wheel_speed;
     float yaw_rate;
     float steer_wheel_angle_dot;
+    bool pilot_state;
 };
 
 struct VehicleBrakeData {
@@ -44,7 +45,8 @@ enum class DataIndex{
     ACC_REF,
     SPEED,
     PITCH,
-    BRAKE_PRESSURE
+    BRAKE_PRESSURE,
+    PILOT
 };
 
 template <typename E>

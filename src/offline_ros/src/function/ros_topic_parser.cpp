@@ -40,8 +40,9 @@ MsgParser::MsgParser(int argc, char *argv[]) {
                   ACC_REF,\
                   SPEED,\
                   PITCH,\
-                  BRAKE_PRESSURE\n";
-    record_data_.resize(static_cast<int>(DataIndex::BRAKE_PRESSURE)+1);
+                  BRAKE_PRESSURE,\
+                  PILOT\n";
+    record_data_.resize(to_int(DataIndex::PILOT)+1);
     dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
     ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
@@ -85,6 +86,7 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
             record_data_[to_int(DataIndex::YAW_RATE)] = dbw_report.vehicle_dynamic().angular_velocity().z();
             record_data_[to_int(DataIndex::BRAKE_PRESSURE)] = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
             record_data_[to_int(DataIndex::SPEED)] = dbw_report.steering_report().speed();
+            record_data_[to_int(DataIndex::PILOT)] = dbw_report.superpilot_enabled();
             // for display and calculation
             swt_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::SWT)],swt_filtered_,0.05);
             brake_pressure_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::BRAKE_PRESSURE)],brake_pressure_filtered_,0.05);
@@ -136,10 +138,10 @@ void MsgParser::ctrl_callback(const std_msgs::String::ConstPtr& msg)
         // 提取数据
         {
             std::lock_guard<std::mutex> lock(data_mutex_);
-            record_data_[static_cast<int>(DataIndex::EBS_CMD)] = control_cmd.brake_cmd().target_acceleration();
-            record_data_[static_cast<int>(DataIndex::ACC_MES)] = control_cmd.debug_cmd().a_report();
-            record_data_[static_cast<int>(DataIndex::ACC_REF)] = control_cmd.debug_cmd().a_target();
-            record_data_[static_cast<int>(DataIndex::PITCH)] =  control_cmd.debug_cmd().pitch_angle();
+            record_data_[to_int(DataIndex::EBS_CMD)] = control_cmd.brake_cmd().target_acceleration();
+            record_data_[to_int(DataIndex::ACC_MES)] = control_cmd.debug_cmd().a_report();
+            record_data_[to_int(DataIndex::ACC_REF)] = control_cmd.debug_cmd().a_target();
+            record_data_[to_int(DataIndex::PITCH)] =  control_cmd.debug_cmd().pitch_angle();
         }
     }
     catch (const std::exception& e)
@@ -177,23 +179,24 @@ void MsgParser::writeToCSV(const long long timestamp, const std::vector<float>& 
 VehicleSteerData MsgParser::getVehicleSteerData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
-            record_data_[static_cast<int>(DataIndex::SWA)],
+            record_data_[to_int(DataIndex::SWA)],
             swt_filtered_,
-            record_data_[static_cast<int>(DataIndex::WHEEL_SPEED)],
-            record_data_[static_cast<int>(DataIndex::YAW_RATE)],
-            swa_dot_};
+            record_data_[to_int(DataIndex::WHEEL_SPEED)],
+            record_data_[to_int(DataIndex::YAW_RATE)],
+            swa_dot_,
+            static_cast<bool>(record_data_[to_int(DataIndex::PILOT)])};
 }
 
 VehicleBrakeData MsgParser::getVehicleBrakeData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
-            record_data_[static_cast<int>(DataIndex::EBS_CMD)],
-            record_data_[static_cast<int>(DataIndex::ACC_MES)],
-            record_data_[static_cast<int>(DataIndex::ACC_REF)],
-            record_data_[static_cast<int>(DataIndex::SPEED)],
-            record_data_[static_cast<int>(DataIndex::PITCH)],
+            record_data_[to_int(DataIndex::EBS_CMD)],
+            record_data_[to_int(DataIndex::ACC_MES)],
+            record_data_[to_int(DataIndex::ACC_REF)],
+            record_data_[to_int(DataIndex::SPEED)],
+            record_data_[to_int(DataIndex::PITCH)],
             brake_pressure_filtered_,
-            record_data_[static_cast<int>(DataIndex::WHEEL_SPEED)]};
+            record_data_[to_int(DataIndex::WHEEL_SPEED)]};
 }
 
 }

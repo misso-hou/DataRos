@@ -65,12 +65,14 @@ int main(int argc, char *argv[]) {
                                         data_row.at(to_int(DataIndex::WHEEL_SPEED)),
                                         data_row.at(to_int(DataIndex::SWA)));
     plt_data.at(5) = mode;
+    bool pilot_state = static_cast<bool>(data_row.at(to_int(DataIndex::PILOT)));
     Animator->SetSteerWheelData(plt_data);
     /*------动画显示-----*/
     Animator->SWTorqueMonitor(600,local_time);
     auto freq01 = windows.GetLongFreqency();
     auto freq02 = windows.GetShortFreqency();
     Animator->BarPlot(freq01,freq02);
+    Animator->SteeringWheelMonitor(data_row.at(to_int(DataIndex::SWA)),pilot_state);
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
     int64_t remaining_T = disp_ctrl_ptr->cycle_time_ - (end_time - start_time);
     if (remaining_T > 0) {

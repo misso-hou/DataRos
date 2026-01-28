@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <iostream>
 #include "algorithm/weighted_window_mode.h"
+#include <matplotlibcpp17/patches.h>
+#include <Eigen/Dense>
 
 namespace modules {
 namespace animation {
@@ -77,7 +79,8 @@ void Animation::InitWeightedWindowsPlt() {
   /***速度监视器***/
   pybind11::dict kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100, "tight_layout"_a = true);
   SWTorquePltInit(kwargs, CMD_X_RANGE);
-  BarPltInit(kwargs);
+  BarPltInit();
+  SteeringWheelPltInit();
 }
 
 void Animation::InitBrakeSysPlt() {
@@ -97,10 +100,12 @@ bool Animation::FrequencyCtrl(int T, int64_t& last_time_stamp) {
   return false;
 }
 
-void Animation::BarPltInit(const pybind11::dict& fig_kwargs) {
+void Animation::BarPltInit() {
   auto plt = mpl::pyplot::import();  
-  auto [figure, axes] = plt.subplots();                              
-  // mpl::figure::Figure figure = plt.figure(Args(), fig_kwargs); 
+  auto subplots = plt.subplots();       
+  //NOTE: noetic模式使用c++14版本编译,17可以使用更简单写法
+  auto figure = std::get<0>(subplots);
+  auto axes = std::get<1>(subplots);                       
   bar_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);    
   bar_axes_ptr_ = make_shared<mpl::axes::Axes>(axes);    
   bar_axes_ptr_->set_xlim(Args(-BAR_X/2, BAR_X/2));
@@ -112,11 +117,31 @@ void Animation::BarPltInit(const pybind11::dict& fig_kwargs) {
   bar_background_ = canvas_copy_from_bbox(bar_figure_ptr_->unwrap());
 }
 
+void Animation::SteeringWheelPltInit() {
+  auto plt = mpl::pyplot::import();  
+  auto subplots = plt.subplots(Kwargs("figsize"_a = py::make_tuple(3, 3),"tight_layout"_a = true));                              
+  //NOTE: noetic模式使用c++14版本编译,17可以使用更简单写法
+  auto figure = std::get<0>(subplots);
+  auto axes = std::get<1>(subplots);
+  steering_wheel_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);    
+  steering_wheel_axes_ptr_ = make_shared<mpl::axes::Axes>(axes); 
+  steering_wheel_axes_ptr_->unwrap().attr("set_axis_off")();   
+  plt.show(Args(), Kwargs("block"_a = 0));
+  steering_wheel_axes_ptr_->set_title(Args("steering wheel"));
+  //绘制圆环
+  pybind11::dict kwargs("width"_a = 0.8, "facecolor"_a="k", "edgecolor"_a="r", "linewidth"_a=2, "alpha"_a=0.7);
+  auto circle = mpl::patches::Wedge(Args(py::make_tuple(0, 0), 5, 0, 360),kwargs);
+  steering_wheel_axes_ptr_->add_patch(Args(circle.unwrap()));
+  plt.axis(Args("scaled"));
+  steering_wheel_axes_ptr_->set_aspect(Args("equal"));
+  plt.pause(Args(0.1));
+  steering_wheel_background_ = canvas_copy_from_bbox(steering_wheel_figure_ptr_->unwrap());
+}
+
 void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range) {
   data_plt_ = mpl::pyplot::import();                                
   mpl::figure::Figure figure = data_plt_.figure(Args(), fig_kwargs); 
   data_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);
-  auto data_gs = GridSpec(4, 1);  
 
   auto gs = data_figure_ptr_->add_gridspec(4, 1,
                                             Kwargs("left"_a = 0.03, "right"_a = 0.99,
@@ -275,6 +300,68 @@ void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
   }
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
+
+// void Animation::BarPlot(const std::unordered_map<int, int>& frequency01,
+//                        const std::unordered_map<int, int>& frequency02) {
+//   std::cout << "BarPlot start" << std::endl;
+  
+//   try {
+//     using namespace ALG::WeightedWindows;
+//     static bool once_flag = true;
+    
+//     const int num = BAR_X/RESOLUTION;
+//     std::cout << "num=" << num << std::endl;
+    
+//     static vector<py::object> bar_artists(num);
+//     static vector<py::object> bar02_artists(num);
+    
+//     if(once_flag){
+//       std::cout << "First init" << std::endl;
+//       once_flag = false;
+      
+//       vector<float> bin(num), nums(num, 0);
+//       for(int i=0;i<num;i++) bin[i] = -BAR_X/2 + RESOLUTION*i;
+      
+//       auto artists = bar_axes_ptr_->bar(Args(bin, nums, RESOLUTION*0.8),
+//                                        Kwargs("color"_a = "blue"))
+//                      .unwrap().cast<py::list>();
+//       auto artists02 = bar_axes_ptr_->bar(Args(bin, nums, RESOLUTION*0.8),
+//                                          Kwargs("color"_a = "green"))
+//                        .unwrap().cast<py::list>();
+      
+//       std::cout << "Artists sizes: " << artists.size() << ", " << artists02.size() << std::endl;
+      
+//       for(int i=0;i<num;i++){
+//         bar_artists[i] = artists[i];
+//         bar02_artists[i] = artists02[i];
+//       }
+//     }
+    
+//     // 更新数据
+//     for (const auto& pair : frequency01){
+//       int index = pair.first + std::floor(BAR_X/(2*RESOLUTION));
+//       if (index >= 0 && index < num) {
+//         bar_artists[index].attr("set_height")(pair.second);
+//         bar_axes_ptr_->unwrap().attr("draw_artist")(bar_artists[index]);
+//       }
+//     }
+    
+//     for (const auto& pair : frequency02){
+//       int index = pair.first + std::floor(BAR_X/(2*RESOLUTION));
+//       if (index >= 0 && index < num) {
+//         bar02_artists[index].attr("set_height")(-pair.second);
+//         bar_axes_ptr_->unwrap().attr("draw_artist")(bar02_artists[index]);
+//       }
+//     }
+    
+//     canvas_update_flush_events(bar_figure_ptr_->unwrap());
+//     std::cout << "BarPlot done" << std::endl;
+    
+//   } catch (const py::error_already_set& e) {
+//     std::cerr << "Python Error: " << e.what() << std::endl;
+//     throw;
+//   }
+// }
 
 void Animation::BarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02) {
   using namespace ALG::WeightedWindows;
@@ -443,5 +530,40 @@ void Animation::BrakeMonitor(int buffer_length,const string& time) {
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 
+void Animation::SteeringWheelMonitor(const float& angle,const bool pilot){
+  static bool once_flag = true;
+  /******动画频率设置******/
+  static int64_t last_sim_time_stamp = 0;
+  if (FrequencyCtrl(DURATION, last_sim_time_stamp)) return;
+  canvas_restore_region(steering_wheel_figure_ptr_->unwrap(), steering_wheel_background_);
+  /******数据计算******/
+  const int point_num = 7;
+  const vector<float> fix_angle{-M_PI/2,-M_PI,-M_PI/2, -M_PI/2, -M_PI/2, 0.0f,-M_PI/2};
+  const Eigen::Vector2f origin_point(4.5f, 0.0f);
+  const Eigen::Vector2f central_point(0.8f, -0.0f);
+  vector<float> frame_x(point_num);
+  vector<float> frame_y(point_num);
+  Eigen::Matrix2f rotateM;
+  for(int i=0;i<point_num;i++){
+    float rotate_angle = fix_angle[i] + angle;
+    rotateM << cos(rotate_angle), -sin(rotate_angle), 
+               sin(rotate_angle), cos(rotate_angle);
+    auto new_point = ((i & 1) == 0) ? rotateM * central_point : rotateM * origin_point;
+    frame_x[i] = new_point(0);
+    frame_y[i] = new_point(1);
+  }
+  /*step02->static artist生成*/
+  static py::object frame_artist;
+  if (once_flag) {
+      once_flag = false;
+      frame_artist = steering_wheel_axes_ptr_->plot(Args(frame_x, frame_y), Kwargs("c"_a = "k", "lw"_a = 20.0,"alpha"_a = 0.7)).unwrap().cast<py::list>()[0];
+  }
+  /*step03->draw artist*/
+  string color = pilot ? "k" : "orange"; //TODO:可以优化
+  frame_artist.attr("set_color")(color);
+  frame_artist.attr("set_data")(frame_x, frame_y);
+  steering_wheel_axes_ptr_->unwrap().attr("draw_artist")(frame_artist);
+  canvas_update_flush_events(steering_wheel_figure_ptr_->unwrap());
+}
 }
 }

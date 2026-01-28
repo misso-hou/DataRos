@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.12)
 project(offline_ros)
 
-# 设置 C++ 标准
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# 设置 C++ 标准 //NOTE:ros noetic默认使用c++14
+# set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_EXTENSIONS OFF)
+# 可见性编译报警消除
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp

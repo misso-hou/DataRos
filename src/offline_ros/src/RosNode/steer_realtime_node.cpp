@@ -20,8 +20,7 @@
 
 using namespace std;
 using namespace matplotlibcpp17;
-
-using namespace std;
+using namespace func::msg_parser;
 namespace Anim = modules::animation;
 namespace AlgWW = ALG::WeightedWindows;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
@@ -40,7 +39,7 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "steer_realtime_module");
   ros::NodeHandle nh;
   // 创建监听器对象
-  func::msg_parser::MsgParser msg_parser(argc, argv);
+  MsgParser msg_parser(argc, argv);
   AlgWW::WeightedWindows windows(2000,400);
   pybind11::scoped_interpreter guard{};
   Animator->InitWeightedWindowsPlt();
@@ -65,6 +64,8 @@ int main(int argc, char *argv[]) {
     auto freq01 = windows.GetLongFreqency();
     auto freq02 = windows.GetShortFreqency();
     Animator->BarPlot(freq01,freq02);
+    bool pilot_state = static_cast<bool>(realtime_data.pilot_state);
+    Animator->SteeringWheelMonitor(realtime_data.steer_wheel_angle,pilot_state);
     rt.sleep();
   }
   pybind11::finalize_interpreter();

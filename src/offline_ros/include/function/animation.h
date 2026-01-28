@@ -38,12 +38,14 @@ class Animation : public utilities::Singleton<Animation> {
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
   void BarPlot(const std::unordered_map<int, int>& frequency,const std::unordered_map<int, int>& frequency02);
+  void SteeringWheelMonitor(const float& angle,const bool pilot);
 
  private:
   bool FrequencyCtrl(int T, int64_t& last_time_stamp);
-  void BarPltInit(const pybind11::dict& fig_kwargs); 
+  void BarPltInit(); 
   void SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range);
   void BrakePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range);
+  void SteeringWheelPltInit();
 
  private:
   //画框
@@ -54,15 +56,15 @@ class Animation : public utilities::Singleton<Animation> {
   shared_ptr<mpl::axes::Axes> data_axes02_ptr_;
   shared_ptr<mpl::axes::Axes> data_axes03_ptr_;
   shared_ptr<mpl::axes::Axes> bar_axes_ptr_;
-  shared_ptr<mpl::axes::Axes> bar02_axes_ptr_;
+  shared_ptr<mpl::axes::Axes> steering_wheel_axes_ptr_;
   // figure
   shared_ptr<mpl::figure::Figure> data_figure_ptr_;
   shared_ptr<mpl::figure::Figure> bar_figure_ptr_;
-  shared_ptr<mpl::figure::Figure> bar02_figure_ptr_;
+  shared_ptr<mpl::figure::Figure> steering_wheel_figure_ptr_;
   // background
   py::object data_background_;
   py::object bar_background_;
-  py::object bar02_background_;
+  py::object steering_wheel_background_;
   py::object jet_cmap_;
 
   // data
