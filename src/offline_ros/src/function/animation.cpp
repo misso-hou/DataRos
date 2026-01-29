@@ -152,7 +152,7 @@ void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x
   auto axes_obj_01 = figure.add_subplot(Args(gs(py::slice(0, 2, 1),0).unwrap()),Kwargs("facecolor"_a = "gray"));           
   data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);    
   data_axes01_ptr_->set_xlim(Args(-0.3f, x_axis_range));
-  data_axes01_ptr_->set_ylim(Args(-2.0, 2.0));
+  data_axes01_ptr_->set_ylim(Args(-4.0, 4.0));
   data_axes01_ptr_->set_xticklabels(Args(py::list()));
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
@@ -168,7 +168,7 @@ void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x
   auto axes_obj_03 = figure.add_subplot(Args(gs(3,0).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
   data_axes03_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_03);    
   data_axes03_ptr_->set_xlim(Args(-0.3f, x_axis_range));
-  data_axes03_ptr_->set_ylim(Args(-0.5, 0.5));  
+  data_axes03_ptr_->set_ylim(Args(-2.5, 2.5));  
   data_axes03_ptr_->set_xticklabels(Args(py::list())); 
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
@@ -230,10 +230,6 @@ void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
   canvas_restore_region(data_figure_ptr_->unwrap(), data_background_);
   /******数据计算******/
   /*step01->实时数据更新*/
-  static vector<float> time_array;
-  static float test_tick = 0;
-  test_tick += 0.4;
-  time_array.push_back(test_tick);
   int data_num = steer_wheel_plt_data_.size();
   static mesh2D line_data(data_num);
   static vector<py::object> lines_artist(data_num);
@@ -244,7 +240,11 @@ void Animation::SWTorqueMonitor(int buffer_length,const string& time) {
   for(uint i=0;i<data_num;i++){
     line_data[i].push_back(steer_wheel_plt_data_[i]);
   }
-  // 数据更新
+  // 横轴数据更新
+  static vector<int> time_array;
+  static int tick = 0;
+  time_array.push_back(tick++);
+  // 纵轴数据更新
   if (time_array.size() > buffer_length) {
     time_array.erase(time_array.begin());
     for(auto& line:line_data){

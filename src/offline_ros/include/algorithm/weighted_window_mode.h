@@ -25,6 +25,13 @@ struct MovingWindow
     std::unordered_map<int, int> frequency;
     float mode;
     float mean;
+
+    void clear() {
+        data.clear();
+        frequency.clear();
+        mode = 0.0f;
+        mean = 0.0f;
+    }
 };
 
 class WeightedWindows {
@@ -37,7 +44,8 @@ public:
     std::unordered_map<int, int> getLongFreqency(){return long_window_.frequency;}    
     std::unordered_map<int, int> getShortFreqency(){return short_window_.frequency;}
     float getLongMean(){return long_window_.mean;}    
-    float getShortMean(){return short_window_.mean;}                        
+    float getShortMean(){return short_window_.mean;}         
+    // void clearShort() {short_window_.clear();}
 
 private:
     bool segmentData(const float& speed,const float& angle);
@@ -46,6 +54,7 @@ private:
     void calLongWindowMode(MovingWindow& window);
     void calShortWindowMode(MovingWindow& window);
     float computeWeightedMode();
+    float computeWeightedMean();
 
 private:
     float last_result_;
@@ -173,6 +182,26 @@ inline float WeightedWindows::computeWeightedMode() {
     return result;
 }
 
+inline float WeightedWindows::computeWeightedMean() {
+    // calculate weighting parameters
+    float a2,a3;
+    auto delta = std::abs(long_window_.mean - short_window_.mean) / B_HIGH;
+    if(delta < (B_LOW/B_HIGH)) {
+        a2 = 1 - HISTORY_WEIGHT;
+        a3 = 0;
+    } else if(delta > 1) {
+        a2 = 0;
+        a3 = 1 - HISTORY_WEIGHT;
+    } else {
+        a2 = (1-delta)*(1-HISTORY_WEIGHT);
+        a3 = delta*(1-HISTORY_WEIGHT);
+    }
+    float result = last_result_;
+    result = HISTORY_WEIGHT*last_result_ + a2*long_window_.mean + a3*short_window_.mean;
+    last_result_ = result;
+    return result;
+}
+
 inline float WeightedWindows::getWeightedMode(const float& torque,
                                               const float& speed,
                                               const float& angle,
@@ -181,6 +210,7 @@ inline float WeightedWindows::getWeightedMode(const float& torque,
     // update_flag_ = segmentData(speed,angle);
     update_flag_ = segmentData(pilot);
     if(!update_flag_) {
+        short_window_.clear();
         return last_result_;
     }
 
@@ -191,7 +221,8 @@ inline float WeightedWindows::getWeightedMode(const float& torque,
         calShortWindowMode(short_window_);
     }
     //step04->compute weighted windows mode
-    float offset_torque = computeWeightedMode();
+    // float offset_torque = computeWeightedMode();
+    float offset_torque = computeWeightedMean();
     return offset_torque;
 }
 

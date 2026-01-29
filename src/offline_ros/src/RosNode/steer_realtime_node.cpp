@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   ros::NodeHandle nh;
   // 创建监听器对象
   MsgParser msg_parser(argc, argv);
-  AlgWW::WeightedWindows windows(200,50);
+  AlgWW::WeightedWindows windows(100,20);
   pybind11::scoped_interpreter guard{};
   Animator->InitWeightedWindowsPlt();
   //主程序线程
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     Animator->SWTorqueMonitor(600,realtime_data.local_time);
     auto freq01 = windows.getLongFreqency();
     auto freq02 = windows.getShortFreqency();
-    Animator->BarPlot(freq01,freq02);
+    // Animator->BarPlot(freq01,freq02); //REVIEW:crash
     Animator->SteeringWheelMonitor(realtime_data.steer_wheel_angle,pilot_state);
     rt.sleep();
   }

@@ -36,15 +36,15 @@ EOF
     -v $HOST_PATH/:/home/workspace               \
     -v /tmp/docker_bashrc:/root/.bashrc          \
     ${NAME}:${TAG} /bin/bash -c "
-        # echo 'source /home/workspace/HMS/DataRos/devel/setup.bash' >> ~/.bashrc &&
-        # cd /home/workspace/HMS/catkin_ws && 
+        echo 'source /home/workspace/HMS/DataRos/devel/setup.bash' >> ~/.bashrc &&
+        cd /home/workspace/HMS/DataRos && 
         exec /bin/bash
     "
 }
 
 exec_docker() {
   if [ $# -eq 0 ];then
-    sudo docker exec -it ${CONTAINER_NAME} /bin/bash -c "cd /home/workspace/HMS/catkin_ws && source /opt/ros/noetic/setup.bash && exec /bin/bash"
+    sudo docker exec -it ${CONTAINER_NAME} /bin/bash -c "cd /home/workspace/HMS/DataRos && source /opt/ros/noetic/setup.bash && exec /bin/bash"
   elif [ $1 = "build" ];then
     shift
     sudo docker exec ${NAME}_${TAG} /bin/bash -c "cd /home/workspace/ && ./build.sh $@"

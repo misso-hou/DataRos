@@ -37,7 +37,7 @@ std::unique_ptr<DisplayControl> disp_ctrl_ptr = std::make_unique<DisplayControl>
  * csv文件内部默认只有一组数据
  */
 int main(int argc, char *argv[]) {
-  AlgWW::WeightedWindows windows(200,50);
+  AlgWW::WeightedWindows windows(150,20);
   pybind11::scoped_interpreter guard{};
   disp_ctrl_ptr->SetParam(argc, argv);
   auto data_mat2D = disp_ctrl_ptr->ExtractData(argc, argv);
@@ -71,10 +71,10 @@ int main(int argc, char *argv[]) {
     plt_data.at(7) = windows.getShortMean();
     Animator->SetSteerWheelData(plt_data);
     /*------动画显示-----*/
-    Animator->SWTorqueMonitor(600,local_time);
+    Animator->SWTorqueMonitor(300,local_time);
     auto freq01 = windows.getLongFreqency();
     auto freq02 = windows.getShortFreqency();
-    Animator->BarPlot(freq01,freq02);
+    // Animator->BarPlot(freq01,freq02);
     Animator->SteeringWheelMonitor(data_row.at(to_int(DataIndex::SWA)),pilot_state);
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
     int64_t remaining_T = disp_ctrl_ptr->cycle_time_ - (end_time - start_time);
