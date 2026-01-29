@@ -33,19 +33,22 @@ class Animation : public utilities::Singleton<Animation> {
  public:
   void SetSteerWheelData(const vector<float>& new_data);
   void SetBrakeData(const vector<float>& new_data);
-  void SWTorqueMonitor(int buffer_length,const string& time);
-  void BrakeMonitor(int buffer_length,const string& time);
+  void SWTorqueMonitor(const string& time, 
+                       const float& angle, 
+                       const bool pilot,
+                       const std::unordered_map<int, int>& freq01,
+                       const std::unordered_map<int, int>& freq02);
+  void BrakeMonitor(const string& time);
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
-  void BarPlot(const std::unordered_map<int, int>& frequency,const std::unordered_map<int, int>& frequency02);
-  void SteeringWheelMonitor(const float& angle,const bool pilot);
 
  private:
   bool FrequencyCtrl(int T, int64_t& last_time_stamp);
-  void BarPltInit(); 
   void SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range);
   void BrakePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range);
-  void SteeringWheelPltInit();
+  void drawSteeringData(const string& time);
+  void drawSteeringWheel(const float& angle,const bool pilot);
+  void drawBarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02);
 
  private:
   //画框

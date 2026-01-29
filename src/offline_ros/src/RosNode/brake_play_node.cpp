@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     plt_data.at(7) = brake_gain*(0.01);
     Animator->SetBrakeData(plt_data);
     /*------动画显示-----*/
-    Animator->BrakeMonitor(600,local_time);
+    Animator->BrakeMonitor(local_time);
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
     int64_t remaining_T = disp_ctrl_ptr->cycle_time_ - (end_time - start_time);
     if (remaining_T > 0) {

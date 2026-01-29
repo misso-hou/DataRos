@@ -71,11 +71,9 @@ int main(int argc, char *argv[]) {
     plt_data.at(7) = windows.getShortMean();
     Animator->SetSteerWheelData(plt_data);
     /*------动画显示-----*/
-    Animator->SWTorqueMonitor(300,local_time);
     auto freq01 = windows.getLongFreqency();
     auto freq02 = windows.getShortFreqency();
-    // Animator->BarPlot(freq01,freq02);
-    Animator->SteeringWheelMonitor(data_row.at(to_int(DataIndex::SWA)),pilot_state);
+    Animator->SWTorqueMonitor(local_time, data_row.at(to_int(DataIndex::SWA)),pilot_state,freq01,freq02);
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
     int64_t remaining_T = disp_ctrl_ptr->cycle_time_ - (end_time - start_time);
     if (remaining_T > 0) {

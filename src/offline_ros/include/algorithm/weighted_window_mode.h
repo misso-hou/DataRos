@@ -23,8 +23,8 @@ struct MovingWindow
     int size;
     std::deque<float> data;
     std::unordered_map<int, int> frequency;
-    float mode;
-    float mean;
+    float mode = 0.0f;
+    float mean = 0.0f;
 
     void clear() {
         data.clear();
@@ -57,7 +57,7 @@ private:
     float computeWeightedMean();
 
 private:
-    float last_result_;
+    float last_result_ = 0.0f;
     bool update_flag_ = false;
 
 private: // tuneable parameters

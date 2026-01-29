@@ -64,11 +64,9 @@ int main(int argc, char *argv[]) {
     plt_data.at(7) = windows.getShortMean();
     Animator->SetSteerWheelData(plt_data);
     /*------动画显示-----*/
-    Animator->SWTorqueMonitor(600,realtime_data.local_time);
     auto freq01 = windows.getLongFreqency();
     auto freq02 = windows.getShortFreqency();
-    // Animator->BarPlot(freq01,freq02); //REVIEW:crash
-    Animator->SteeringWheelMonitor(realtime_data.steer_wheel_angle,pilot_state);
+    Animator->SWTorqueMonitor(realtime_data.local_time, realtime_data.steer_wheel_angle, pilot_state,freq01,freq02);
     rt.sleep();
   }
   pybind11::finalize_interpreter();
