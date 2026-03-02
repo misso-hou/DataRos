@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     data_row.at(7) = brake_gain*(0.01);
     Animator->SetBrakeData(data_row);
     /*------动画显示-----*/
-    Animator->BrakeMonitor(realtime_data.local_time);
+    Animator->BrakeMonitor(realtime_data.local_time,0,false); //TODO:
     rt.sleep();
   }
   pybind11::finalize_interpreter();

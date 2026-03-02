@@ -38,7 +38,7 @@ class Animation : public utilities::Singleton<Animation> {
                        const bool pilot,
                        const std::unordered_map<int, int>& freq01,
                        const std::unordered_map<int, int>& freq02);
-  void BrakeMonitor(const string& time);
+  void BrakeMonitor(const string& time,const float& angle, const bool pilot);
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
 
@@ -49,6 +49,7 @@ class Animation : public utilities::Singleton<Animation> {
   void drawSteeringData(const string& time);
   void drawSteeringWheel(const float& angle,const bool pilot);
   void drawBarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02);
+  void DrawBrakeData(const string& time);
 
  private:
   //画框

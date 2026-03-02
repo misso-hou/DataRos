@@ -31,9 +31,9 @@ class RLSFilter {
   T lam_inv_;                /**< Inverse forgetting factor */
   T delta_;                  /**< Initial gain value of matrix P */
   VectorXt w_;               /**< Filter coefficients vector */
-  MatrixXt P_;               /**< Inverse covariance error matrix */
+  MatrixXt P_;               /**< covariance error matrix */
   MatrixXt P_supp_;          /**< Inverse covariance error matrix */
-  VectorXt g_;               /**< Filter gains */
+  VectorXt g_;               /**< Kalman Filter gains vector */
   T err_;                    /**< A priori error */
   unsigned long long count_; /**< Count of filter updates */
 

@@ -8,20 +8,26 @@ using namespace Eigen;
 template <typename T, int N>
 using VectorXt = Matrix<T, N, 1>;
 
-//********************************************纵向力观测器********************************************/
+// RLS计算刹车增益
+// Kalman filter计算刹车增益
+
+//********************************************纵向力观测器(sliding mode observer)********************************************/
 /**
  * step01->estimate brake gain(RLS)[RLS又需要用到纵向力去迭代估计]  ---- 已完成
- * step02->calculate brake torque(brake pressure*brake gain)    ---- 
+ * step02->calculate brake torque(brake pressure*brake gain)
  * step03->observer estimate wheel force Fx
  * step04->estimate acceleration compensation factor(RLS) [补偿ebs控制器造成的加速度误差],适当降低任务难度,可以先辨识刹车性能下降
  */
 
 /**
- * @brief:initilize luenber observer(wheel longitudinal force observer)
+ * @brief:initilize observer(wheel longitudinal force observer)
  *  * state space：
  *     |F(k+1)|   |    1      0|     |F(k)|     |   0  |
- *     |w(k+1)| = |-R*ts/I_w  1|  ×  |W(k)|  +  |ts/I_w| + |Kb * P|
- */
+ *     |w(k+1)| = |-R*ts/I_w  1|  ×  |W(k)|  +  |ts/I_w| x |Kb * P|
+ *  * Y = CX :    (adding a acc made the observer robust to brake gain errors)
+ *     |Ww    |   |1    0|     |Fx|
+ *     |Vx_dot| = |0 -1/M|  x  |Ww|
+ */     
 void BrakeTorqueObserver::initBrakeObserver(){
     //TODO:set vehicle params
     // model_params_.drag_coeff = raw_param_->drag_coefficient();
@@ -32,7 +38,7 @@ void BrakeTorqueObserver::initBrakeObserver(){
     model_params_.wheel_inertia = 100.0;
     model_params_.wheel_radius = 0.6;
     model_params_.brake_gain = 0.6; 
-    model_params_.drag_coeff = 0.68;       //aero drag 
+    model_params_.drag_coeff = 0.68;                  //aero drag 
     model_params_.front_area = 10.0;
     model_params_.rolling_friction_coeff = 0.007;
     model_params_.mass = 29000.0;
@@ -52,7 +58,7 @@ void BrakeTorqueObserver::initBrakeObserver(){
     mat_L_(1,0) = 1;
     x_hat_ = Eigen::VectorXd::Zero(2);
     y_mes_ = Eigen::VectorXd::Zero(2);
-    brake_gain_RLS_ = std::make_unique<RLSFilter<double,1>>(1.0,1.0);
+    brake_gain_RLS_ = std::make_unique<RLSFilter<double,1>>(0.98,1.0);
     Eigen::Matrix<double, 1, 1> w0;
     w0 << 0.0;
     brake_gain_RLS_->setEstimatedCoefficients(w0);
@@ -63,10 +69,9 @@ void BrakeTorqueObserver::initBrakeObserver(){
  * @brief:propogate the state space model
  * wheel dynamic-> I*omege_w_dot - R_w*Fx + T_brake = 0
  * state space->|X(k+1)| = A*X(k) + B*U(k)：
- *     |F(k+1)|   |    1      0|     |F(k)|     |   0  |
- *     |w(k+1)| = |-R*ts/I_w  1|  ×  |W(k)|  +  |ts/I_w| + |Kb * P|
+ *              |F(k+1)|   |    1      0|     |F(k)|     |   0  |
+ *              |w(k+1)| = |-R*ts/I_w  1|  ×  |W(k)|  +  |ts/I_w| x |Kb * P|
  * Y(K) = C*X(k):
- *     []
  */
 void BrakeTorqueObserver::stateUpdate(const double& pressure,
                                       const double& acceleration,
@@ -104,7 +109,7 @@ double BrakeTorqueObserver::ComputeRollingResis() {
 
 /**
  * @brief:estimate brake gain(in brake state)
- * note:是否需要考虑缓速器的影响???
+ * note:需要排除缓速器,坡道等外部扭矩的影响,车轮的转动惯量也忽略不计
  */
 double BrakeTorqueObserver::estimateBrakeGain(const double& v,
                                             const double& acc_mes, 
@@ -129,10 +134,13 @@ double BrakeTorqueObserver::estimateBrakeGain(const double& v,
     return brake_gain_;                                        
 }
 
-//********************************************横向观测器********************************************/
-/**
- * @brief:initilize luenber observer(wheel longitudinal force observer)
- */
+// //********************************************横向观测器********************************************/
+// /**
+//  * @brief:initilize luenber observer(wheel longitudinal force observer)
+//  * @note:
+//  *      state:  [Vy yaw_rate delta delta_offset]  -> 待观测状态:横向速度 / 角速度滤波 / 前轮转角度 / 零偏转转角
+//  *      result: [0  yaw_rate  0  0] -> 可测量状态:车辆角速度 / 车辆方向盘角度(车辆前轮转角)
+//  */
 // void LateralObserver::initBrakeObserver(){
 //     //set threshold
 //     min_v_thd_ = 0.0;
@@ -178,11 +186,6 @@ double BrakeTorqueObserver::estimateBrakeGain(const double& v,
 //     y_mes_ = Eigen::VectorXd::Zero(4,1);
 // }
 
-// void LateralObserver::resetObserver(const double& steer_angle){
-//     x_hat_(0, 0) = 0.0;
-//     x_hat_(1, 0) = model_params_.yaw_rate();
-//     x_hat_(2, 0) = steer_angle;
-// }
 
 // /**
 //  * @brief:propogate the state space model
@@ -191,41 +194,59 @@ double BrakeTorqueObserver::estimateBrakeGain(const double& v,
 //  */
 // void LateralObserver::stateUpdate(const double& speed,
 //                                   const double& yaw_rate,
-//                                   const double& steering_wheel_angle){
-//     //step0->set model params
+//                                   const double& swa_ref){
+//     //step0->update measured data
 //     model_params_.v = speed;
 //     model_params_.yaw_rate = yaw_rate;
 //     //TODO:update steering tau by interpolation???
-//     //step01->update measurement(front wheel steering angle) //TODO:ebs compensation
-//     auto delta_angle = steering_wheel_angle / model_params_.swa_to_delta_ratio;
-//     if(model_params_.v < min_v_thd_){
-//         resetObserver(delta_angle);
-//     }                        
+//     //step01->update measurement(front wheel steering angle) //TODO:run or not
+//     // if(model_params_.v < min_v_thd_){
+//     //     resetObserver(ref_delta_angle);
+//     // }                        
 //     //step02->update state space matrices time variant variables
 //     mat_a_(0,0) = -2*(model_params_.cf + model_params_.cr) / (model_params_.mass * model_params_.v);
 //     mat_a_(0,1) = -model_params_.v + 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.mass * model_params_.v);
 //     mat_a_(1,0) = 2*(model_params_.lr * model_params_.cr - model_params_.lf * model_params_.cf) / (model_params_.iz * model_params_.v);
 //     mat_a_(1,1) = -2*(model_params_.lf * model_params_.lf * model_params_.cf + model_params_.lr * model_params_.lr * model_params_.cr) / (model_params_.iz * model_params_.v);
-//     mat_b_(2,0) = 1 / model_params_.steering_tau;
 //     //step3->first order approximation of ODE
+//     auto valid_input = computeValidDeltaAngle(swa_ref);
 //     auto y_err = yaw_rate - x_hat_(1);
-//     x_hat_ += model_params_.ts * (mat_a_ * x_hat_ + mat_b_ * delta_angle) + mat_L_ * y_err;                                   
+//     x_hat_ += model_params_.ts * (mat_a_ * x_hat_ + mat_b_ * valid_input) + mat_L_ * y_err;                                   
+// }
+
+// //???:used in what situation?
+// void LateralObserver::resetObserver(const double& steer_angle){
+//     x_hat_(0, 0) = 0.0;
+//     x_hat_(1, 0) = model_params_.yaw_rate();
+//     x_hat_(2, 0) = steer_angle;
 // }
 
 // /**
-//  * @brief:steering first order delay variable time 
+//  * @brief:calculate valid delta angle input //TODO:
 //  */
-// void LateralObserver::setSteerTau(const double& steer_tau){
-//     model_params_.steer_tau = steer_tau;
+// float LateralObserver::computeValidDeltaAngle(const float& ref_swa){
+//     //step01->calculate real delta commnad(add eps compensation)
+//     auto ref_delta_angle = ref_swa / model_params_.swa_to_delta_ratio;
+//     //step02->elimite backlash
+//     float valid_delta;
+//     return valid_delta;
 // }
 
-// double LateralObserver::getSteerAngle(){
-//     return x_hat_(2);
-// }
 
-// double LateralObserver::getSteeringWheelOffsetAngle(){
-//     auto offset_angle = x_hat(3) * model_params_.swa_to_delta_ratio;
-// }
+// // /**
+// //  * @brief:steering first order delay variable time 
+// //  */
+// // void LateralObserver::setSteerTau(const double& steer_tau){
+// //     model_params_.steer_tau = steer_tau;
+// // }
+
+// // double LateralObserver::getSteerAngle(){
+// //     return x_hat_(2);
+// // }
+
+// // double LateralObserver::getSteeringWheelOffsetAngle(){
+// //     auto offset_angle = x_hat(3) * model_params_.swa_to_delta_ratio;
+// // }
 
 
 }
