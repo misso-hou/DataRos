@@ -67,6 +67,7 @@ add_executable(steer_play_node
   src/RosNode/steer_play_node.cpp      
   src/function/ros_topic_parser.cpp    
   src/function/animation.cpp
+  src/function/animation_functions.cpp
   src/function/display_control.cpp
 )
 
@@ -81,6 +82,7 @@ add_executable(brake_play_node
   src/RosNode/brake_play_node.cpp      
   src/function/ros_topic_parser.cpp    
   src/function/animation.cpp
+  src/function/animation_functions.cpp
   src/function/display_control.cpp
   src/algorithm/observer.cpp
 )
@@ -96,6 +98,7 @@ add_executable(steer_realtime_node
   src/RosNode/steer_realtime_node.cpp      
   src/function/ros_topic_parser.cpp    
   src/function/animation.cpp
+  src/function/animation_functions.cpp
 )
 
 # ROS 与外部库的链接
@@ -109,6 +112,7 @@ add_executable(brake_realtime_node
   src/RosNode/brake_realtime_node.cpp      
   src/function/ros_topic_parser.cpp    
   src/function/animation.cpp
+  src/function/animation_functions.cpp
   src/algorithm/observer.cpp
 )
 
@@ -123,6 +127,7 @@ add_executable(hmi_realtime_node
   src/RosNode/hmi_realtime_node.cpp      
   src/function/ros_topic_parser.cpp    
   src/function/animation.cpp
+  src/function/animation_functions.cpp
 )
 
 # ROS 与外部库的链接

@@ -35,33 +35,10 @@ int main(int argc, char *argv[]) {
   ros::Rate rt(20);
   while (ros::ok()) {
     ros::spinOnce();
-    // auto hmi_data = msg_parser.getHmiData();
-    // vector<float> plt_data(8);
-    // plt_data.at(0) = realtime_data.steer_wheel_angle;
-    // plt_data.at(1) = realtime_data.steer_wheel_torque_filtered;
-    // plt_data.at(2) = realtime_data.wheel_speed;
-    // plt_data.at(3) = realtime_data.yaw_rate;
-    // plt_data.at(4) = realtime_data.steer_wheel_angle_dot;
-    // bool pilot_state = static_cast<bool>(realtime_data.pilot_state);
-    // auto mode = windows.getWeightedMode(realtime_data.steer_wheel_torque_filtered,
-    //                                     realtime_data.wheel_speed,
-    //                                     realtime_data.yaw_rate,
-    //                                     pilot_state);
-    // plt_data.at(5) = mode;
-    // plt_data.at(6) = windows.getLongMean();
-    // plt_data.at(7) = windows.getShortMean();
-    // Animator->SetSteerWheelData(plt_data);
-    // /*------动画显示-----*/
-    // auto freq01 = windows.getLongFreqency();
-    // auto freq02 = windows.getShortFreqency();
-    // Animator->SWTorqueMonitor(realtime_data.local_time, realtime_data.steer_wheel_angle, pilot_state,freq01,freq02);
+
     rt.sleep();
   }
   pybind11::finalize_interpreter();
   ROS_INFO("实时模块正常退出");
   return 0;
 }
-
-
-
-

@@ -1,29 +1,17 @@
 #pragma once
 
 #include <iostream>
-#include <matplotlibcpp17/axes.h>
-#include <matplotlibcpp17/figure.h>
-#include <matplotlibcpp17/pyplot.h>
 #include <memory>
-#include <pybind11/embed.h>
-#include <pybind11/pybind11.h>
 #include <vector>
-
-
-#include "tool_box/base_time_struct.h"
 #include "tool_box/singleton.h"
+#include "function/animation_functions.h"
 
 namespace modules {
 namespace animation {
 
 using namespace std;
-namespace py = pybind11;
-namespace mpl = matplotlibcpp17;
-using matplotlibcpp17::gridspec::GridSpec;
 
-using mesh2D = vector<vector<float>>;
-
-class Animation : public utilities::Singleton<Animation> {
+class Animation : public utilities::Singleton<Animation>, public AnimationFunctions{
   friend class Singleton<Animation>;
 
  private:
@@ -31,8 +19,8 @@ class Animation : public utilities::Singleton<Animation> {
   ~Animation() {}
 
  public:
-  void SetSteerWheelData(const vector<float>& new_data);   //TODO:合并简化
-  void SetBrakeData(const vector<float>& new_data);        //TODO:合并简化
+  void SetSteerWheelData(const vector<float>& new_data);
+  void SetBrakeData(const vector<float>& new_data);
   void SWTorqueMonitor(const string& time, 
                        const float& angle, 
                        const bool pilot,
@@ -43,37 +31,6 @@ class Animation : public utilities::Singleton<Animation> {
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
   void InitVehicleMonitor();
-
- private:
-  bool FrequencyCtrl(int T, int64_t& last_time_stamp);
-  void drawSteeringData(const string& time);
-  void drawSteeringWheel(const float& angle,const bool pilot);
-  void drawBarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02);
-  void DrawBrakeData(const string& time);
-
- private:
-  //画框
-  mpl::pyplot::PyPlot data_plt_;
-  //轴系
-  shared_ptr<mpl::axes::Axes> data_axes01_ptr_;
-  shared_ptr<mpl::axes::Axes> data_axes02_ptr_;
-  shared_ptr<mpl::axes::Axes> data_axes03_ptr_;
-  shared_ptr<mpl::axes::Axes> bar_axes_ptr_;
-  shared_ptr<mpl::axes::Axes> steering_wheel_axes_ptr_;
-  shared_ptr<mpl::axes::Axes> hmi_patches_axes_ptr_;
-  // figure
-  shared_ptr<mpl::figure::Figure> data_figure_ptr_;
-  // background
-  py::object data_background_;
-  py::object vehicle_monitor_background_;
-  py::object jet_cmap_;
-  // artist
-  py::object hmi_rect_patches_; 
-
-  // data
-  vector<float> steer_wheel_plt_data_;
-  vector<float> brake_plt_data_;
-
 };
 }  // namespace animation
 }  // namespace modules
