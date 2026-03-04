@@ -48,6 +48,11 @@ MsgParser::MsgParser(int argc, char *argv[]) {
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
 }
 
+MsgParser::MsgParser() {
+    dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
+    ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
+}
+
 MsgParser::~MsgParser()
 {
     if (csv_file_.is_open())
@@ -90,6 +95,18 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
             // for display and calculation
             swt_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::SWT)],swt_filtered_,0.05);
             brake_pressure_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::BRAKE_PRESSURE)],brake_pressure_filtered_,0.05);
+            // HMI data -> buttons data
+            buttons_data_.acc_engage_button = dbw_report.hmi_report().acc_engage_button_pressed();
+            buttons_data_.acc_disengage_button = dbw_report.hmi_report().acc_disengage_button_pressed();
+            buttons_data_.acc_restore_button = dbw_report.hmi_report().acc_restore_button_pressed();
+            buttons_data_.pilot_engage_button = dbw_report.hmi_report().super_pilot_engage_button_pressed();
+            buttons_data_.pilot_disengage_button = dbw_report.hmi_report().super_pilot_disengage_button_pressed();
+            buttons_data_.acc_increase = dbw_report.hmi_report().acc_set_inc_button_pressed();
+            buttons_data_.acc_decrease = dbw_report.hmi_report().acc_set_dec_button_pressed();
+            // HMI data -> switch data
+            switch_data_.acc_switch = dbw_report.hmi_report().acc_switch();
+            switch_data_.pilot_switch = dbw_report.hmi_report().pilot_switch();
+            switch_data_.noa_switch = dbw_report.hmi_report().noa_switch_button_pressed();
         }
 
         // 提取→转秒→转时间
@@ -198,6 +215,14 @@ VehicleBrakeData MsgParser::getVehicleBrakeData() {
             brake_pressure_filtered_,
             record_data_[to_int(DataIndex::WHEEL_SPEED)]};
 }
+
+HmiData MsgParser::getHmiData() {
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    return {local_time_,
+            buttons_data_,
+            switch_data_};
+}
+
 
 }
 } // namespace name

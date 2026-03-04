@@ -118,6 +118,19 @@ target_link_libraries(brake_realtime_node
   ${VISUALIZATION_LIBS}
 )
 
+# --------------------刹车实时运算节点--------------------
+add_executable(hmi_realtime_node
+  src/RosNode/hmi_realtime_node.cpp      
+  src/function/ros_topic_parser.cpp    
+  src/function/animation.cpp
+)
+
+# ROS 与外部库的链接
+target_link_libraries(hmi_realtime_node
+  ${COMMON_LIBS}
+  ${VISUALIZATION_LIBS}
+)
+
 # --------------------ROS监听器节点-------------------
 add_executable(ros_listener_node
   src/RosNode/ros_listener_node.cpp
@@ -131,7 +144,13 @@ target_link_libraries(ros_listener_node
 
 ###########################INSTALL###########################
 # 安装执行文件
-install(TARGETS steer_play_node brake_play_node ros_listener_node steer_realtime_node brake_realtime_node
+install(TARGETS 
+  steer_play_node 
+  brake_play_node 
+  ros_listener_node 
+  steer_realtime_node 
+  brake_realtime_node
+  hmi_realtime_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

@@ -75,18 +75,6 @@ auto canvas_restore_region = [](pybind11::object figure, pybind11::object bg) {
   canvas_restore_region_attr(bg);
 };
 
-void Animation::InitWeightedWindowsPlt() {
-  /***速度监视器***/
-  pybind11::dict kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100, "tight_layout"_a = true);
-  SWTorquePltInit(kwargs, CMD_X_RANGE);
-}
-
-void Animation::InitBrakeSysPlt() {
-  /***速度监视器***/
-  pybind11::dict kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100);
-  BrakePltInit(kwargs, CMD_X_RANGE);
-}
-
 bool Animation::FrequencyCtrl(int T, int64_t& last_time_stamp) {
   int64_t current_time_stamp = TimeToolKit::TimeSpecSysCurrentMs();  // 获取当前时间戳
   // 时间控制
@@ -98,7 +86,9 @@ bool Animation::FrequencyCtrl(int T, int64_t& last_time_stamp) {
   return false;
 }
 
-void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range) {
+void Animation::InitWeightedWindowsPlt() {
+  pybind11::dict fig_kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100, "tight_layout"_a = true);
+  auto x_axis_range = CMD_X_RANGE;
   data_plt_ = mpl::pyplot::import();                                
   mpl::figure::Figure figure = data_plt_.figure(Args(), fig_kwargs); 
   data_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);
@@ -155,7 +145,9 @@ void Animation::SWTorquePltInit(const pybind11::dict& fig_kwargs, const float& x
   data_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());
 }
 
-void Animation::BrakePltInit(const pybind11::dict& fig_kwargs, const float& x_axis_range) {
+void Animation::InitBrakeSysPlt() {
+  pybind11::dict fig_kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100);
+  auto x_axis_range = CMD_X_RANGE;
   data_plt_ = mpl::pyplot::import();                                
   mpl::figure::Figure figure = data_plt_.figure(Args(), fig_kwargs); 
   data_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);
@@ -201,6 +193,75 @@ void Animation::BrakePltInit(const pybind11::dict& fig_kwargs, const float& x_ax
   data_plt_.axis(Args("scaled"));
   data_plt_.pause(Args(0.1));
   data_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());
+}
+
+void Animation::InitVehicleMonitor() {
+  pybind11::dict fig_kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100, "tight_layout"_a = true);
+  data_plt_ = mpl::pyplot::import();                                
+  mpl::figure::Figure figure = data_plt_.figure(Args(), fig_kwargs); 
+  data_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);
+
+  auto gs = data_figure_ptr_->add_gridspec(4, 8,
+                                            Kwargs("left"_a = 0.03, "right"_a = 0.99,
+                                                  "bottom"_a = 0.04, "top"_a = 0.97,
+                                                  "wspace"_a = 0.15, "hspace"_a = 0.15));
+
+  //----------------------------data curve----------------------------    
+  //axes01->hmi 按键&开关&状态 //NOTE:占用figure的比例与坐标轴的范围对应
+  auto patches_axes_obj = figure.add_subplot(Args(gs(0, py::slice(0, 7, 1)).unwrap()),Kwargs("facecolor"_a = "gray")); 
+  hmi_patches_axes_ptr_ = make_shared<mpl::axes::Axes>(patches_axes_obj);    
+  hmi_patches_axes_ptr_->unwrap().attr("set_axis_off")();
+  hmi_patches_axes_ptr_->set_title(Args("HMI"));
+  float width,height;
+  width = 0.55;
+  height = 0.15;
+  // 矩形左下角坐标
+  float rect_x = 0;
+  float rect_y = 1 - height;  // 关键：y坐标是 1-height
+  auto r = mpl::patches::Rectangle(Args(py::make_tuple(0, 1-height), width, height),
+                                   Kwargs("ec"_a = "#000000", "fill"_a = true));
+  py::list lst;
+  vector<string> button_name = {"buttons:","acc_engage", "acc_disengage", "acc_restore", "pilot_engage", "pilot_disengage", "acc_increase","acc_decrease"};
+  for(int i=0;i<button_name.size();i++){
+    // 矩形左下角坐标
+    float rect_x = 0 + i*0.05 + i*width;
+    float rect_y = 1 - height;  // 关键：y坐标是 1-height
+    // 计算矩形中心点坐标（使用正确的左下角坐标）
+    double center_x = rect_x + width/2.0;
+    double center_y = rect_y + height/2.0;
+    int fontsize = i>0 ? 8 : 16;
+    string color = i>0 ? "white" : "red";
+    // 在矩形中心添加文字
+    hmi_patches_axes_ptr_->text(Args(center_x, center_y, button_name[i]),
+                                Kwargs("ha"_a = "center",
+                                        "va"_a = "center",
+                                        "color"_a = color,
+                                        "fontsize"_a = fontsize));
+    auto r = mpl::patches::Rectangle(Args(py::make_tuple(rect_x, rect_y), width, height),
+                                    Kwargs("ec"_a = "#000000", "fill"_a = true));
+    if(i>0){
+      lst.append(r.unwrap());
+    }
+  }
+  hmi_rect_patches_ = lst;
+  auto p = mpl::collections::PatchCollection(Args(hmi_rect_patches_), Kwargs("alpha"_a = 0.4));
+  // p.set_array(Args(colors));
+  hmi_patches_axes_ptr_->add_collection(Args(p.unwrap()));
+  hmi_patches_axes_ptr_->set_xlim(Args(0, 7));
+  hmi_patches_axes_ptr_->set_ylim(Args(0, 1));
+  //------------------------------------steering wheel------------------------------------
+  auto steering_wheel_axes_obj = figure.add_subplot(Args(gs(0, 7).unwrap()));
+  steering_wheel_axes_ptr_ = make_shared<mpl::axes::Axes>(steering_wheel_axes_obj);    
+  steering_wheel_axes_ptr_->unwrap().attr("set_axis_off")();
+  steering_wheel_axes_ptr_->set_title(Args("steering wheel"));
+  //绘制圆环
+  pybind11::dict kwargs("width"_a = 0.8, "facecolor"_a="k", "edgecolor"_a="r", "linewidth"_a=2, "alpha"_a=0.7);
+  auto circle = mpl::patches::Wedge(Args(py::make_tuple(0, 0), 5, 0, 360),kwargs);
+  steering_wheel_axes_ptr_->add_patch(Args(circle.unwrap()));
+  steering_wheel_axes_ptr_->set_aspect(Args("equal"));
+  data_plt_.axis(Args("scaled"));
+  data_plt_.pause(Args(0.1));
+  vehicle_monitor_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());                                          
 }
 
 void Animation::SetSteerWheelData(const vector<float>& new_data) {
@@ -510,6 +571,12 @@ void Animation::BrakeMonitor(const string& time,
   DrawBrakeData(time);
   drawSteeringWheel(angle,pilot);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
+}
+
+void Animation::VehicleMonitor(const string& time){
+  /******动画频率设置******/
+  static int64_t last_sim_time_stamp = 0;
+  if (FrequencyCtrl(DURATION, last_sim_time_stamp)) return;
 }
 
 }

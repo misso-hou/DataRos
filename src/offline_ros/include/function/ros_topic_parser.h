@@ -35,6 +35,28 @@ struct VehicleBrakeData {
     float wheel_speed;
 };
 
+struct HmiButtonsData {
+    bool acc_engage_button;
+    bool acc_disengage_button;
+    bool acc_restore_button;
+    bool pilot_engage_button;
+    bool pilot_disengage_button;
+    bool acc_increase;
+    bool acc_decrease;
+};
+
+struct HmiSwitchData {
+    bool acc_switch;
+    bool pilot_switch;
+    bool noa_switch;
+};
+
+struct HmiData {
+    std::string local_time;
+    HmiButtonsData buttons;
+    HmiSwitchData switches;
+};
+
 enum class DataIndex{
     SWA = 0,
     SWT,
@@ -58,11 +80,13 @@ constexpr auto to_int(E e) noexcept {
 class MsgParser {
     public:
         MsgParser(int argc, char *argv[]);
+        MsgParser();
         ~MsgParser();
 
     public:
         VehicleSteerData getVehicleSteerData();
         VehicleBrakeData getVehicleBrakeData();
+        HmiData getHmiData();
 
     private:
         void dbw_callback(const std_msgs::String::ConstPtr& msg);
@@ -81,6 +105,8 @@ class MsgParser {
         std::string local_time_;
         std::vector<float> record_data_;
         bool first_flag_ = true;
+        HmiButtonsData buttons_data_;
+        HmiSwitchData switch_data_;
     
     private:  // 后处理数据
         float swa_dot_ = 0.0;
