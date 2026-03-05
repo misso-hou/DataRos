@@ -66,7 +66,7 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
     try
     {
         // 解析protobuf消息
-        drive::common::control::DbwReports dbw_report;
+        control::DbwReports dbw_report;
         if (!dbw_report.ParseFromString(msg->data))
         {
             ROS_WARN("Failed to parse protobuf message");
@@ -95,18 +95,8 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
             // for display and calculation
             swt_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::SWT)],swt_filtered_,0.05);
             brake_pressure_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::BRAKE_PRESSURE)],brake_pressure_filtered_,0.05);
-            // HMI data -> buttons data
-            buttons_data_.acc_engage_button = dbw_report.hmi_report().acc_engage_button_pressed();
-            buttons_data_.acc_disengage_button = dbw_report.hmi_report().acc_disengage_button_pressed();
-            buttons_data_.acc_restore_button = dbw_report.hmi_report().acc_restore_button_pressed();
-            buttons_data_.pilot_engage_button = dbw_report.hmi_report().super_pilot_engage_button_pressed();
-            buttons_data_.pilot_disengage_button = dbw_report.hmi_report().super_pilot_disengage_button_pressed();
-            buttons_data_.acc_increase = dbw_report.hmi_report().acc_set_inc_button_pressed();
-            buttons_data_.acc_decrease = dbw_report.hmi_report().acc_set_dec_button_pressed();
-            // HMI data -> switch data
-            switch_data_.acc_switch = dbw_report.hmi_report().acc_switch();
-            switch_data_.pilot_switch = dbw_report.hmi_report().pilot_switch();
-            switch_data_.noa_switch = dbw_report.hmi_report().noa_switch_button_pressed();
+            // HMI data -> buttons and switches
+            updateHmiData(dbw_report);
         }
 
         // 提取→转秒→转时间
@@ -139,6 +129,19 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
     {
         ROS_WARN("Failed to decode binary data: Unknown error");
     }
+}
+
+void MsgParser::updateHmiData(const control::DbwReports& dbw_report) {
+    button_switch_.buttons.at("acc_engage") = dbw_report.hmi_report().acc_engage_button_pressed();
+    button_switch_.buttons.at("acc_disengage") = dbw_report.hmi_report().acc_disengage_button_pressed();
+    button_switch_.buttons.at("acc_restore") = dbw_report.hmi_report().acc_restore_button_pressed();
+    button_switch_.buttons.at("pilot_engage") = dbw_report.hmi_report().super_pilot_engage_button_pressed();
+    button_switch_.buttons.at("pilot_disengage") = dbw_report.hmi_report().super_pilot_disengage_button_pressed();
+    button_switch_.buttons.at("acc_increase") = dbw_report.hmi_report().acc_set_inc_button_pressed();
+    button_switch_.buttons.at("acc_decrease") = dbw_report.hmi_report().acc_set_dec_button_pressed();
+    button_switch_.switches.at("acc_switch") = dbw_report.hmi_report().acc_switch();
+    button_switch_.switches.at("pilot_switch") = dbw_report.hmi_report().pilot_switch();
+    button_switch_.switches.at("noa_switch") = dbw_report.hmi_report().noa_switch_button_pressed();
 }
 
 void MsgParser::ctrl_callback(const std_msgs::String::ConstPtr& msg)
@@ -219,8 +222,7 @@ VehicleBrakeData MsgParser::getVehicleBrakeData() {
 HmiData MsgParser::getHmiData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
-            buttons_data_,
-            switch_data_};
+            button_switch_};
 }
 
 

@@ -5,12 +5,16 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <map>
 
 // 包含已编译的protobuf头文件
 #include "plusai_common_proto/control/dbw_reports.pb.h"
 #include "plusai_common_proto/control/control_command.pb.h"
+
 namespace func {
 namespace msg_parser {
+
+namespace control = drive::common::control;
 
 extern float TS;
 
@@ -35,26 +39,30 @@ struct VehicleBrakeData {
     float wheel_speed;
 };
 
-struct HmiButtonsData {
-    bool acc_engage_button;
-    bool acc_disengage_button;
-    bool acc_restore_button;
-    bool pilot_engage_button;
-    bool pilot_disengage_button;
-    bool acc_increase;
-    bool acc_decrease;
-};
-
-struct HmiSwitchData {
-    bool acc_switch;
-    bool pilot_switch;
-    bool noa_switch;
+struct ButtonAndSwitch {
+    std::map<std::string, bool> buttons;
+    std::map<std::string, bool> switches;
+    ButtonAndSwitch() {
+        buttons = {
+            {"acc_engage", false},
+            {"acc_disengage", false},
+            {"acc_restore", false},
+            {"pilot_engage", false},
+            {"pilot_disengage", false},
+            {"acc_increase", false},
+            {"acc_decrease", false}
+        };
+        switches = {
+            {"acc_switch", false},
+            {"pilot_switch", false},
+            {"noa_switch", false}
+        };
+    }
 };
 
 struct HmiData {
     std::string local_time;
-    HmiButtonsData buttons;
-    HmiSwitchData switches;
+    ButtonAndSwitch button_switch;
 };
 
 enum class DataIndex{
@@ -92,6 +100,7 @@ class MsgParser {
         void dbw_callback(const std_msgs::String::ConstPtr& msg);
         void ctrl_callback(const std_msgs::String::ConstPtr& msg);
         void writeToCSV(const long long timestamp, const std::vector<float>& data);
+        void updateHmiData(const control::DbwReports& dbw_report);
     
     private:
         ros::NodeHandle nh_;
@@ -105,9 +114,8 @@ class MsgParser {
         std::string local_time_;
         std::vector<float> record_data_;
         bool first_flag_ = true;
-        HmiButtonsData buttons_data_;
-        HmiSwitchData switch_data_;
-    
+        ButtonAndSwitch button_switch_;
+        
     private:  // 后处理数据
         float swa_dot_ = 0.0;
         float swt_filtered_ = 0.0;

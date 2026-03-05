@@ -10,6 +10,7 @@
 #include <vector>
 #include "tool_box/base_time_struct.h"
 #include "tool_box/singleton.h"
+#include "function/ros_topic_parser.h"
 
 namespace modules {
 namespace animation {
@@ -72,6 +73,8 @@ class AnimationFunctions {
     void drawSteeringWheel(const float& angle,const bool pilot);
     void drawBarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02);
     void drawBrakeData(const string& time);
+    void drawHmiData();
+    void initSteerWheel(mpl::axes::Axes& axes);
 
   protected:
     //画框
@@ -95,7 +98,7 @@ class AnimationFunctions {
     // data
     vector<float> steer_wheel_plt_data_;
     vector<float> brake_plt_data_;
-
+    func::msg_parser::HmiData hmi_plt_data_;
 };
 }  // namespace animation
 }  // namespace modules

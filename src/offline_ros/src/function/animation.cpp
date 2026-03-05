@@ -10,6 +10,8 @@ namespace modules {
 namespace animation {
 
 const int DURATION = 50;
+const float button_width = 0.7;
+const float button_height = 0.18;
 
 // canvas and flush events
 auto canvas_update_flush_events = [](pybind11::object figure) {
@@ -74,14 +76,7 @@ void Animation::InitWeightedWindowsPlt() {
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   //------------------------------------steering wheel------------------------------------
   auto steering_wheel_axes_obj = figure.add_subplot(Args(gs(py::slice(0, 2, 1), 3).unwrap()));
-  steering_wheel_axes_ptr_ = make_shared<mpl::axes::Axes>(steering_wheel_axes_obj);    
-  steering_wheel_axes_ptr_->unwrap().attr("set_axis_off")();
-  steering_wheel_axes_ptr_->set_title(Args("steering wheel"));
-  //绘制圆环
-  pybind11::dict kwargs("width"_a = 0.8, "facecolor"_a="k", "edgecolor"_a="r", "linewidth"_a=2, "alpha"_a=0.7);
-  auto circle = mpl::patches::Wedge(Args(py::make_tuple(0, 0), 5, 0, 360),kwargs);
-  steering_wheel_axes_ptr_->add_patch(Args(circle.unwrap()));
-  steering_wheel_axes_ptr_->set_aspect(Args("equal"));
+  initSteerWheel(steering_wheel_axes_obj);
   data_plt_.axis(Args("scaled"));
   //------------------------------------统计数据---------------------------------------
   auto bar_axes_obj = figure.add_subplot(Args(gs(py::slice(2, 4, 1), 3).unwrap())); 
@@ -132,14 +127,7 @@ void Animation::InitBrakeSysPlt() {
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
   //------------------------------------steering wheel------------------------------------
   auto steering_wheel_axes_obj = figure.add_subplot(Args(gs(py::slice(0, 2, 1), 3).unwrap()));
-  steering_wheel_axes_ptr_ = make_shared<mpl::axes::Axes>(steering_wheel_axes_obj);    
-  steering_wheel_axes_ptr_->unwrap().attr("set_axis_off")();
-  steering_wheel_axes_ptr_->set_title(Args("steering wheel"));
-  //绘制圆环
-  pybind11::dict kwargs("width"_a = 0.8, "facecolor"_a="k", "edgecolor"_a="r", "linewidth"_a=2, "alpha"_a=0.7);
-  auto circle = mpl::patches::Wedge(Args(py::make_tuple(0, 0), 5, 0, 360),kwargs);
-  steering_wheel_axes_ptr_->add_patch(Args(circle.unwrap()));
-  steering_wheel_axes_ptr_->set_aspect(Args("equal"));
+  initSteerWheel(steering_wheel_axes_obj);
   data_plt_.axis(Args("scaled"));
   data_plt_.pause(Args(0.1));
   data_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());
@@ -162,57 +150,76 @@ void Animation::InitVehicleMonitor() {
   hmi_patches_axes_ptr_ = make_shared<mpl::axes::Axes>(patches_axes_obj);    
   hmi_patches_axes_ptr_->unwrap().attr("set_axis_off")();
   hmi_patches_axes_ptr_->set_title(Args("HMI"));
-  float width,height;
-  width = 0.55;
-  height = 0.15;
-  // 矩形左下角坐标
-  float rect_x = 0;
-  float rect_y = 1 - height;  // 关键：y坐标是 1-height
-  auto r = mpl::patches::Rectangle(Args(py::make_tuple(0, 1-height), width, height),
-                                   Kwargs("ec"_a = "#000000", "fill"_a = true));
   py::list lst;
-  vector<string> button_name = {"buttons:","acc_engage", "acc_disengage", "acc_restore", "pilot_engage", "pilot_disengage", "acc_increase","acc_decrease"};
+  func::msg_parser::ButtonAndSwitch button_switch;
+  vector<string> button_name = {"buttons:"};
+  for (const auto& pair : button_switch.buttons) {
+    const auto& key = pair.first;
+    button_name.push_back(key);
+  }
+  //绘制buttons
   for(int i=0;i<button_name.size();i++){
     // 矩形左下角坐标
-    float rect_x = 0 + i*0.05 + i*width;
-    float rect_y = 1 - height;  // 关键：y坐标是 1-height
+    float rect_x = 0 + i*0.05 + i*button_width;
+    float rect_y = 1 - button_height;
     // 计算矩形中心点坐标（使用正确的左下角坐标）
-    double center_x = rect_x + width/2.0;
-    double center_y = rect_y + height/2.0;
-    int fontsize = i>0 ? 8 : 16;
-    string color = i>0 ? "white" : "red";
+    double center_x = rect_x + button_width/2.0;
+    double center_y = rect_y + button_height/2.0;
+    int fontsize = i>0 ? 10 : 16;
+    string color = i>0 ? "black" : "red";
     // 在矩形中心添加文字
     hmi_patches_axes_ptr_->text(Args(center_x, center_y, button_name[i]),
                                 Kwargs("ha"_a = "center",
                                         "va"_a = "center",
                                         "color"_a = color,
                                         "fontsize"_a = fontsize));
-    auto r = mpl::patches::Rectangle(Args(py::make_tuple(rect_x, rect_y), width, height),
-                                    Kwargs("ec"_a = "#000000", "fill"_a = true));
+    auto r = mpl::patches::Rectangle(Args(py::make_tuple(rect_x, rect_y), button_width, button_height),
+                                    Kwargs("ec"_a = "gray", "fc"_a = "gray", "fill"_a = true));
     if(i>0){
       lst.append(r.unwrap());
     }
   }
-  hmi_rect_patches_ = lst;
-  auto p = mpl::collections::PatchCollection(Args(hmi_rect_patches_), Kwargs("alpha"_a = 0.4));
-  // p.set_array(Args(colors));
-  hmi_patches_axes_ptr_->add_collection(Args(p.unwrap()));
+  //绘制switches
+  vector<string> switches_name = {"switches:"};
+  for (const auto& pair : button_switch.switches) {
+    const auto& key = pair.first;
+    switches_name.push_back(key);
+  }
+  for(int i=0;i<switches_name.size();i++){
+    // 矩形左下角坐标
+    float rect_x = 0 + i*0.05 + i*button_width;
+    float rect_y = 1 - 2.5*button_height;
+    // 计算矩形中心点坐标（使用正确的左下角坐标）
+    double center_x = rect_x + button_width/2.0;
+    double center_y = rect_y + button_height/2.0;
+    int fontsize = i>0 ? 12 : 16;
+    string color = i>0 ? "black" : "red";
+    // 在矩形中心添加文字
+    hmi_patches_axes_ptr_->text(Args(center_x, center_y, switches_name[i]),
+                                Kwargs("ha"_a = "center",
+                                        "va"_a = "center",
+                                        "color"_a = color,
+                                        "fontsize"_a = fontsize));
+    auto r = mpl::patches::Rectangle(Args(py::make_tuple(rect_x, rect_y), button_width, button_height),
+                                    Kwargs("ec"_a = "gray", "fc"_a = "gray", "fill"_a = true));
+    if(i>0){
+      lst.append(r.unwrap());
+    }
+  }
+  auto p = mpl::collections::PatchCollection(Args(lst), Kwargs("alpha"_a = 0.5));
+  hmi_rect_patches_ = p.unwrap();
+  hmi_patches_axes_ptr_->add_collection(Args(hmi_rect_patches_));
   hmi_patches_axes_ptr_->set_xlim(Args(0, 7));
   hmi_patches_axes_ptr_->set_ylim(Args(0, 1));
   //------------------------------------steering wheel------------------------------------
   auto steering_wheel_axes_obj = figure.add_subplot(Args(gs(0, 7).unwrap()));
-  steering_wheel_axes_ptr_ = make_shared<mpl::axes::Axes>(steering_wheel_axes_obj);    
-  steering_wheel_axes_ptr_->unwrap().attr("set_axis_off")();
-  steering_wheel_axes_ptr_->set_title(Args("steering wheel"));
-  //绘制圆环
-  pybind11::dict kwargs("width"_a = 0.8, "facecolor"_a="k", "edgecolor"_a="r", "linewidth"_a=2, "alpha"_a=0.7);
-  auto circle = mpl::patches::Wedge(Args(py::make_tuple(0, 0), 5, 0, 360),kwargs);
-  steering_wheel_axes_ptr_->add_patch(Args(circle.unwrap()));
-  steering_wheel_axes_ptr_->set_aspect(Args("equal"));
+  initSteerWheel(steering_wheel_axes_obj);
   data_plt_.axis(Args("scaled"));
   data_plt_.pause(Args(0.1));
   vehicle_monitor_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());                                          
 }
+
+
 
 void Animation::SetSteerWheelData(const vector<float>& new_data) {
   steer_wheel_plt_data_ = new_data;
@@ -220,6 +227,10 @@ void Animation::SetSteerWheelData(const vector<float>& new_data) {
 
 void Animation::SetBrakeData(const vector<float>& new_data) {
   brake_plt_data_ = new_data;
+}
+
+void Animation::SetHmiData(const func::msg_parser::HmiData hmi_data) {
+  hmi_plt_data_ = hmi_data;
 }
 
 void Animation::SWTorqueMonitor(const string& time, 
@@ -252,10 +263,15 @@ void Animation::BrakeMonitor(const string& time,
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 
-void Animation::VehicleMonitor(const string& time){
+void Animation::VehicleMonitor() {
   /******动画频率设置******/
   static int64_t last_sim_time_stamp = 0;
   if (frequencyCtrl(DURATION, last_sim_time_stamp)) return;
+  /******绘图******/
+  canvas_restore_region(data_figure_ptr_->unwrap(), vehicle_monitor_background_);
+  drawHmiData();
+  drawSteeringWheel(0,false); //TODO:
+  canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 
 }

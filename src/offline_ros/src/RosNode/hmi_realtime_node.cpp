@@ -28,14 +28,17 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "vehicle_monitor_starting");
   ros::NodeHandle nh;
   // 创建监听器对象
-  MsgParser msg_parser();
+  MsgParser msg_parser;
   pybind11::scoped_interpreter guard{};
   Animator->InitVehicleMonitor();
   //主程序线程
   ros::Rate rt(20);
   while (ros::ok()) {
     ros::spinOnce();
-
+    auto hmi_data = msg_parser.getHmiData();
+    Animator->SetHmiData(hmi_data);
+    /*------动画显示-----*/
+    Animator->VehicleMonitor();
     rt.sleep();
   }
   pybind11::finalize_interpreter();

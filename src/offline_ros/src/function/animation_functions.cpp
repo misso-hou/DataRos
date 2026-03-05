@@ -291,5 +291,33 @@ void AnimationFunctions::drawBrakeData(const string& time){
   }  
 }
 
+void AnimationFunctions::drawHmiData(){
+  py::list color_lst;
+  auto button_switch = hmi_plt_data_.button_switch;
+  for (const auto& pair : button_switch.buttons) {
+    string color = pair.second ? "orange" : "orange";
+    color_lst.append(color);
+  }
+  for (const auto& pair : button_switch.switches) {
+    string color = pair.second ? "orange" : "gray";
+    color_lst.append(color);
+  }
+  hmi_rect_patches_.attr("set_facecolors")(color_lst);
+  hmi_patches_axes_ptr_->unwrap().attr("draw_artist")(hmi_rect_patches_);
+}
+
+void AnimationFunctions::initSteerWheel(mpl::axes::Axes& axes){
+  //------------------------------------steering wheel------------------------------------
+  steering_wheel_axes_ptr_ = make_shared<mpl::axes::Axes>(axes);    
+  steering_wheel_axes_ptr_->unwrap().attr("set_axis_off")();
+  steering_wheel_axes_ptr_->set_title(Args("steering wheel"));
+  //绘制圆环
+  pybind11::dict kwargs("width"_a = 0.8, "facecolor"_a="k", "edgecolor"_a="r", "linewidth"_a=2, "alpha"_a=0.7);
+  auto circle = mpl::patches::Wedge(Args(py::make_tuple(0, 0), 5, 0, 360),kwargs);
+  steering_wheel_axes_ptr_->add_patch(Args(circle.unwrap()));
+  steering_wheel_axes_ptr_->set_aspect(Args("equal"));
+
+}
+
 }
 }

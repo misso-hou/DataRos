@@ -21,13 +21,14 @@ class Animation : public utilities::Singleton<Animation>, public AnimationFuncti
  public:
   void SetSteerWheelData(const vector<float>& new_data);
   void SetBrakeData(const vector<float>& new_data);
+  void SetHmiData(const func::msg_parser::HmiData hmi_data);
   void SWTorqueMonitor(const string& time, 
                        const float& angle, 
                        const bool pilot,
                        const std::unordered_map<int, int>& freq01,
                        const std::unordered_map<int, int>& freq02);
   void BrakeMonitor(const string& time,const float& angle, const bool pilot);
-  void VehicleMonitor(const string& time);
+  void VehicleMonitor();
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
   void InitVehicleMonitor();
