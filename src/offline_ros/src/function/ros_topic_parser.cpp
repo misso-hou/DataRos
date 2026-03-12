@@ -45,12 +45,14 @@ MsgParser::MsgParser(int argc, char *argv[]) {
     record_data_.resize(to_int(DataIndex::PILOT)+1);
     dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
     ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
+    watchdog_sub_ = nh_.subscribe("/watchdog/current_state",1000, &MsgParser::watchdog_callback, this);
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
 }
 
 MsgParser::MsgParser() {
     dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
     ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
+    watchdog_sub_ = nh_.subscribe("/watchdog/current_state",1000, &MsgParser::watchdog_callback, this);
 }
 
 MsgParser::~MsgParser()
@@ -63,72 +65,61 @@ MsgParser::~MsgParser()
 
 void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
 {
-    try
+    // 解析protobuf消息
+    control::DbwReports dbw_report;
+    if (!dbw_report.ParseFromString(msg->data))
     {
-        // 解析protobuf消息
-        control::DbwReports dbw_report;
-        if (!dbw_report.ParseFromString(msg->data))
-        {
-            ROS_WARN("Failed to parse protobuf message");
-            return;
+        ROS_WARN("Failed to parse DbwReports message");
+        return;
+    }
+    
+    // 提取数据
+    {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        //steering wheel angle speed calculation
+        if(first_flag_){
+            first_flag_ = false;
+            swt_filtered_ = record_data_[to_int(DataIndex::SWT)];
+            brake_pressure_filtered_ = record_data_[to_int(DataIndex::BRAKE_PRESSURE)];
+        }else{
+            swa_dot_ = (dbw_report.steering_report().steering_wheel_angle() - record_data_[to_int(DataIndex::SWA)]) / TS;
         }
-        
-        // 提取数据
-        {
-            std::lock_guard<std::mutex> lock(data_mutex_);
-            //steering wheel angle speed calculation
-            if(first_flag_){
-                first_flag_ = false;
-                swt_filtered_ = record_data_[to_int(DataIndex::SWT)];
-                brake_pressure_filtered_ = record_data_[to_int(DataIndex::BRAKE_PRESSURE)];
-            }else{
-                swa_dot_ = (dbw_report.steering_report().steering_wheel_angle() - record_data_[to_int(DataIndex::SWA)]) / TS;
-            }
-            // realtime data
-            record_data_[to_int(DataIndex::SWA)] = dbw_report.steering_report().steering_wheel_angle();
-            record_data_[to_int(DataIndex::SWT)] = dbw_report.steering_report().steering_wheel_torque();
-            record_data_[to_int(DataIndex::WHEEL_SPEED)] = dbw_report.wheel_speed_report().front_axle_speed();
-            record_data_[to_int(DataIndex::YAW_RATE)] = dbw_report.vehicle_dynamic().angular_velocity().z();
-            record_data_[to_int(DataIndex::BRAKE_PRESSURE)] = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
-            record_data_[to_int(DataIndex::SPEED)] = dbw_report.steering_report().speed();
-            record_data_[to_int(DataIndex::PILOT)] = dbw_report.superpilot_enabled();
-            // for display and calculation
-            swt_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::SWT)],swt_filtered_,0.05);
-            brake_pressure_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::BRAKE_PRESSURE)],brake_pressure_filtered_,0.05);
-            // HMI data -> buttons and switches
-            updateHmiData(dbw_report);
-        }
+        // realtime data
+        record_data_[to_int(DataIndex::SWA)] = dbw_report.steering_report().steering_wheel_angle();
+        record_data_[to_int(DataIndex::SWT)] = dbw_report.steering_report().steering_wheel_torque();
+        record_data_[to_int(DataIndex::WHEEL_SPEED)] = dbw_report.wheel_speed_report().front_axle_speed();
+        record_data_[to_int(DataIndex::YAW_RATE)] = dbw_report.vehicle_dynamic().angular_velocity().z();
+        record_data_[to_int(DataIndex::BRAKE_PRESSURE)] = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
+        record_data_[to_int(DataIndex::SPEED)] = dbw_report.steering_report().speed();
+        record_data_[to_int(DataIndex::PILOT)] = dbw_report.superpilot_enabled();
+        // for display and calculation
+        swt_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::SWT)],swt_filtered_,0.05);
+        brake_pressure_filtered_ = Math::LowPassFilter(record_data_[to_int(DataIndex::BRAKE_PRESSURE)],brake_pressure_filtered_,0.05);
+        // HMI data -> buttons and switches
+        updateHmiData(dbw_report);
+    }
 
-        // 提取→转秒→转时间
-        long long ts_msec = dbw_report.header().timestamp_msec(); // 提取原始毫秒戳
-        time_t timestamp_ms = static_cast<time_t>(ts_msec);
-        // 分离秒和毫秒部分
-        long long seconds = timestamp_ms / 1000;      // 整数秒部分
-        long long milliseconds = timestamp_ms % 1000; // 毫秒部分（0-999）
-        // 转换为UTC时间（秒部分）
-        time_t raw_sec = static_cast<time_t>(seconds);
-        struct tm t;
-        gmtime_r(&raw_sec, &t);
-        // 时区修正：UTC+8（北京时间）
-        int beijing_hour = (t.tm_hour + 8) % 24;
-        // 格式化为时分秒.毫秒
-        local_time_ = std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
-                      std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
-                      std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10) + "." +
-                      std::to_string(milliseconds/100) + 
-                      std::to_string((milliseconds/10)%10) + 
-                      std::to_string(milliseconds%10);
+    // 提取→转秒→转时间
+    long long ts_msec = dbw_report.header().timestamp_msec(); // 提取原始毫秒戳
+    time_t timestamp_ms = static_cast<time_t>(ts_msec);
+    // 分离秒和毫秒部分
+    long long seconds = timestamp_ms / 1000;      // 整数秒部分
+    long long milliseconds = timestamp_ms % 1000; // 毫秒部分（0-999）
+    // 转换为UTC时间（秒部分）
+    time_t raw_sec = static_cast<time_t>(seconds);
+    struct tm t;
+    gmtime_r(&raw_sec, &t);
+    // 时区修正：UTC+8（北京时间）
+    int beijing_hour = (t.tm_hour + 8) % 24;
+    // 格式化为时分秒.毫秒
+    local_time_ = std::to_string(beijing_hour/10) + std::to_string(beijing_hour%10) + ":" +
+                    std::to_string(t.tm_min/10) + std::to_string(t.tm_min%10) + ":" +
+                    std::to_string(t.tm_sec/10) + std::to_string(t.tm_sec%10) + "." +
+                    std::to_string(milliseconds/100) + 
+                    std::to_string((milliseconds/10)%10) + 
+                    std::to_string(milliseconds%10);
 
-        writeToCSV(ts_msec, record_data_);
-    }
-    catch (const std::exception& e)
-    {
-        ROS_WARN("Failed to decode binary data: %s", e.what());
-    }
-    catch (...)
-    {
-        ROS_WARN("Failed to decode binary data: Unknown error");
-    }
+    writeToCSV(ts_msec, record_data_);
 }
 
 void MsgParser::updateHmiData(const control::DbwReports& dbw_report) {
@@ -146,31 +137,40 @@ void MsgParser::updateHmiData(const control::DbwReports& dbw_report) {
 
 void MsgParser::ctrl_callback(const std_msgs::String::ConstPtr& msg)
 {
-    try
+    control::ControlCommand control_cmd;
+    if (!control_cmd.ParseFromString(msg->data))
     {
-        drive::common::control::ControlCommand control_cmd;
-        if (!control_cmd.ParseFromString(msg->data))
-        {
-            ROS_WARN("Failed to parse protobuf message");
-            return;
-        }
-        
-        // 提取数据
-        {
-            std::lock_guard<std::mutex> lock(data_mutex_);
-            record_data_[to_int(DataIndex::EBS_CMD)] = control_cmd.brake_cmd().target_acceleration();
-            record_data_[to_int(DataIndex::ACC_MES)] = control_cmd.debug_cmd().a_report();
-            record_data_[to_int(DataIndex::ACC_REF)] = control_cmd.debug_cmd().a_target();
-            record_data_[to_int(DataIndex::PITCH)] =  control_cmd.debug_cmd().pitch_angle();
-        }
+        ROS_WARN("Failed to parse ControlCommand message");
+        return;
     }
-    catch (const std::exception& e)
+    // 提取数据
     {
-        ROS_WARN("Failed to decode binary data: %s", e.what());
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        record_data_[to_int(DataIndex::EBS_CMD)] = control_cmd.brake_cmd().target_acceleration();
+        record_data_[to_int(DataIndex::ACC_MES)] = control_cmd.debug_cmd().a_report();
+        record_data_[to_int(DataIndex::ACC_REF)] = control_cmd.debug_cmd().a_target();
+        record_data_[to_int(DataIndex::PITCH)] =  control_cmd.debug_cmd().pitch_angle();
     }
-    catch (...)
+}
+
+void MsgParser::watchdog_callback(const std_msgs::String::ConstPtr& msg)
+{
+    monitor::AppWatchdogState watchdog;
+    if (!watchdog.ParseFromString(msg->data))
     {
-        ROS_WARN("Failed to decode binary data: Unknown error");
+        ROS_WARN("Failed to parse watchdog message");
+        return;
+    }
+    // 提取数据
+    {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        watchdog_state_.state.at("acc") = watchdog.acc_state();
+        watchdog_state_.state.at("pilot") = watchdog.super_pilot_state();
+        watchdog_state_.state.at("noa") = watchdog.noa_state();
+        watchdog_state_.state.at("aeb") = watchdog.acc_state();
+        watchdog_state_.state.at("ldw") = watchdog.acc_state();
+        watchdog_state_.state.at("dms") = watchdog.dms_state();
+        watchdog_state_.state.at("bsd") = watchdog.bsd_state();
     }
 }
 
@@ -222,7 +222,8 @@ VehicleBrakeData MsgParser::getVehicleBrakeData() {
 HmiData MsgParser::getHmiData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
-            button_switch_};
+            button_switch_,
+            watchdog_state_};
 }
 
 

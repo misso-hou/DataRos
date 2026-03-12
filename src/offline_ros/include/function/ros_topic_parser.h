@@ -10,13 +10,54 @@
 // 包含已编译的protobuf头文件
 #include "plusai_common_proto/control/dbw_reports.pb.h"
 #include "plusai_common_proto/control/control_command.pb.h"
+#include "plusai_common_proto/monitor/app_watchdog_state.pb.h"
 
 namespace func {
 namespace msg_parser {
 
 namespace control = drive::common::control;
+namespace monitor = drive::common::monitor;
 
 extern float TS;
+
+enum FSMState {
+    UNKNOWN = 0, // As a placeholder
+    SelfInspection = 1,
+    Fault = 2,
+    Off = 3,
+    Standby = 4,
+    Active = 5,
+    LevelOneAlarming = 6,
+    LevelTwoAlarming = 7,
+    LevelThreeAlarming = 8,
+    VehicleLevelOneAlarming = 9,
+    VehicleLevelTwoAlarming = 10,
+    PedestrianLevelOneAlarming = 11,
+    PedestrianLevelTwoAlarming = 12,
+    VehicleObstacleAlarmingAndEB = 13,
+    PedestrianObstacleAlarmingAndEB = 14,
+    LeftDepartureAlarming = 15,
+    RightDepartureAlarming = 16,
+    LeftBlindSpotAlarming = 17,
+    RightBlindSpotAlarming = 18,
+    BothSidesBlindSpotAlarming = 19,
+    NotAvailable = 20,
+    STAGE1_SELF_INSPECTION = 21,
+    STAGE1_SELF_INSPECTION_FAILED = 22,
+    STAGE2_SELF_INSPECTION = 23,
+    Disabled = 24,
+    MCUTakeover = 25,
+    MCUFault = 26,
+    NotTrigger = 27,
+    BeforeEMP = 28,
+    EMPAvailable = 29,
+    EMPUnavailable = 30,
+    LeftBlindSpotLevelTwoAlarming = 31,
+    LeftBlindSpotLevelThreeAlarming = 32,
+    RightBlindSpotLevelTwoAlarming = 33,
+    RightBlindSpotLevelThreeAlarming = 34
+};
+
 
 struct VehicleSteerData {
     std::string local_time;
@@ -60,9 +101,68 @@ struct ButtonAndSwitch {
     }
 };
 
+struct Watchdog {
+    std::map<std::string, int> state;
+    Watchdog() {
+        state = {
+            {"acc", 0},
+            {"pilot", 0},
+            {"noa", 0},
+            {"aeb", 0},
+            {"ldw", 0},
+            {"dms", 0},
+            {"bsd", 0},
+        };
+    }
+
+    std::string FSMStateToString(int value) {
+        FSMState state = static_cast<FSMState>(value);
+        switch (state) {
+            case UNKNOWN:                          return "UNKNOWN";
+            case SelfInspection:                   return "SelfInspection";
+            case Fault:                            return "Fault";
+            case Off:                              return "Off";
+            case Standby:                          return "Standby";
+            case Active:                           return "Active";
+            case LevelOneAlarming:                 return "LevelOneAlarming";
+            case LevelTwoAlarming:                 return "LevelTwoAlarming";
+            case LevelThreeAlarming:               return "LevelThreeAlarming";
+            case VehicleLevelOneAlarming:          return "VehicleLevelOneAlarming";
+            case VehicleLevelTwoAlarming:          return "VehicleLevelTwoAlarming";
+            case PedestrianLevelOneAlarming:       return "PedestrianLevelOneAlarming";
+            case PedestrianLevelTwoAlarming:       return "PedestrianLevelTwoAlarming";
+            case VehicleObstacleAlarmingAndEB:     return "VehicleObstacleAlarmingAndEB";
+            case PedestrianObstacleAlarmingAndEB:  return "PedestrianObstacleAlarmingAndEB";
+            case LeftDepartureAlarming:            return "LeftDepartureAlarming";
+            case RightDepartureAlarming:           return "RightDepartureAlarming";
+            case LeftBlindSpotAlarming:            return "LeftBlindSpotAlarming";
+            case RightBlindSpotAlarming:           return "RightBlindSpotAlarming";
+            case BothSidesBlindSpotAlarming:       return "BothSidesBlindSpotAlarming";
+            case NotAvailable:                     return "NotAvailable";
+            case STAGE1_SELF_INSPECTION:           return "STAGE1_SELF_INSPECTION";
+            case STAGE1_SELF_INSPECTION_FAILED:    return "STAGE1_SELF_INSPECTION_FAILED";
+            case STAGE2_SELF_INSPECTION:           return "STAGE2_SELF_INSPECTION";
+            case Disabled:                         return "Disabled";
+            case MCUTakeover:                      return "MCUTakeover";
+            case MCUFault:                         return "MCUFault";
+            case NotTrigger:                       return "NotTrigger";
+            case BeforeEMP:                        return "BeforeEMP";
+            case EMPAvailable:                     return "EMPAvailable";
+            case EMPUnavailable:                   return "EMPUnavailable";
+            case LeftBlindSpotLevelTwoAlarming:    return "LeftBlindSpotLevelTwoAlarming";
+            case LeftBlindSpotLevelThreeAlarming:  return "LeftBlindSpotLevelThreeAlarming";
+            case RightBlindSpotLevelTwoAlarming:   return "RightBlindSpotLevelTwoAlarming";
+            case RightBlindSpotLevelThreeAlarming: return "RightBlindSpotLevelThreeAlarming";
+            default: 
+                throw std::invalid_argument("Unknown FSMState value: " + std::to_string(static_cast<int>(state)));
+        }
+    }
+};
+
 struct HmiData {
     std::string local_time;
     ButtonAndSwitch button_switch;
+    Watchdog watchdog_state;
 };
 
 enum class DataIndex{
@@ -99,6 +199,7 @@ class MsgParser {
     private:
         void dbw_callback(const std_msgs::String::ConstPtr& msg);
         void ctrl_callback(const std_msgs::String::ConstPtr& msg);
+        void watchdog_callback(const std_msgs::String::ConstPtr& msg);
         void writeToCSV(const long long timestamp, const std::vector<float>& data);
         void updateHmiData(const control::DbwReports& dbw_report);
     
@@ -106,6 +207,7 @@ class MsgParser {
         ros::NodeHandle nh_;
         ros::Subscriber dbw_sub_;
         ros::Subscriber ctrl_sub_;
+        ros::Subscriber watchdog_sub_;
         std::ofstream csv_file_;
         std::string csv_file_path_;
         std::mutex data_mutex_;
@@ -115,6 +217,7 @@ class MsgParser {
         std::vector<float> record_data_;
         bool first_flag_ = true;
         ButtonAndSwitch button_switch_;
+        Watchdog watchdog_state_;
         
     private:  // 后处理数据
         float swa_dot_ = 0.0;

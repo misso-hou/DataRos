@@ -70,10 +70,11 @@ class AnimationFunctions {
   protected:
     bool frequencyCtrl(int T, int64_t& last_time_stamp);
     void drawSteeringData(const string& time);
-    void drawSteeringWheel(const float& angle,const bool pilot);
+    void drawSteeringWheel(const float& angle,const bool pilot, const float& line_width);
     void drawBarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02);
     void drawBrakeData(const string& time);
     void drawHmiData();
+    void drawWatchdogState();
     void initSteerWheel(mpl::axes::Axes& axes);
 
   protected:
@@ -86,6 +87,7 @@ class AnimationFunctions {
     shared_ptr<mpl::axes::Axes> bar_axes_ptr_;
     shared_ptr<mpl::axes::Axes> steering_wheel_axes_ptr_;
     shared_ptr<mpl::axes::Axes> hmi_patches_axes_ptr_;
+    shared_ptr<mpl::axes::Axes> watchdog_axes_ptr_;
     // figure
     shared_ptr<mpl::figure::Figure> data_figure_ptr_;
     // background

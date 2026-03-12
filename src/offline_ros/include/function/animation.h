@@ -28,7 +28,7 @@ class Animation : public utilities::Singleton<Animation>, public AnimationFuncti
                        const std::unordered_map<int, int>& freq01,
                        const std::unordered_map<int, int>& freq02);
   void BrakeMonitor(const string& time,const float& angle, const bool pilot);
-  void VehicleMonitor();
+  void VehicleMonitor(const float& angle, const bool pilot);
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
   void InitVehicleMonitor();

@@ -94,7 +94,7 @@ void AnimationFunctions::drawSteeringData(const string& time){
   }
 }
 
-void AnimationFunctions::drawSteeringWheel(const float& angle,const bool pilot){
+void AnimationFunctions::drawSteeringWheel(const float& angle,const bool pilot, const float& line_width){
   static bool once_flag = true;
   /******数据计算******/
   const int point_num = 7;
@@ -116,7 +116,7 @@ void AnimationFunctions::drawSteeringWheel(const float& angle,const bool pilot){
   static py::object frame_artist;
   if (once_flag) {
       once_flag = false;
-      frame_artist = steering_wheel_axes_ptr_->plot(Args(frame_x, frame_y), Kwargs("c"_a = "k", "lw"_a = 20.0,"alpha"_a = 0.7)).unwrap().cast<py::list>()[0];
+      frame_artist = steering_wheel_axes_ptr_->plot(Args(frame_x, frame_y), Kwargs("c"_a = "k", "lw"_a = line_width,"alpha"_a = 0.7)).unwrap().cast<py::list>()[0];
   }
   /*step03->draw artist*/
   string color = pilot ? "k" : "orange"; //TODO:可以优化
@@ -295,7 +295,7 @@ void AnimationFunctions::drawHmiData(){
   py::list color_lst;
   auto button_switch = hmi_plt_data_.button_switch;
   for (const auto& pair : button_switch.buttons) {
-    string color = pair.second ? "orange" : "orange";
+    string color = pair.second ? "orange" : "gray";
     color_lst.append(color);
   }
   for (const auto& pair : button_switch.switches) {
@@ -304,6 +304,48 @@ void AnimationFunctions::drawHmiData(){
   }
   hmi_rect_patches_.attr("set_facecolors")(color_lst);
   hmi_patches_axes_ptr_->unwrap().attr("draw_artist")(hmi_rect_patches_);
+}
+
+void AnimationFunctions::drawWatchdogState(){
+  static bool once_flag = true;
+  static vector<py::object> text_artist;
+  auto watchdog = hmi_plt_data_.watchdog_state;
+  vector<string> state_name = {"watchdog:"};
+  for (const auto& pair : watchdog.state) {
+    const auto& key = pair.first;
+    const auto& value = pair.second;
+    string state = watchdog.FSMStateToString(value);
+    string each_state_name = key + ": " + state;
+    state_name.push_back(each_state_name);
+  }
+  if (once_flag) {
+    once_flag = false;
+    try {
+      for(int i=0;i<state_name.size();i++){
+        // 计算矩形中心点坐标（使用正确的左下角坐标）
+        float text_x = i>0 ? 0.02 : 0.5;
+        double center_y = 0.95 - i *0.06;
+        int fontsize = i>0 ? 12 : 16;
+        string color = i>0 ? "white" : "red";
+        string ha = i>0 ? "left" : "center";
+        // 在矩形中心添加文字
+        auto artist = watchdog_axes_ptr_->text(Args(text_x, center_y, state_name[i]),
+                                                Kwargs("ha"_a = ha,
+                                                        "va"_a = "center",
+                                                        "color"_a = color,
+                                                        "fontsize"_a = fontsize));
+        text_artist.push_back(artist.unwrap());
+      }    
+    } catch (const exception& e) {
+      cout << "[Brake] 首次执行异常: " << e.what() << endl;
+      throw; // 重新抛出，让bug暴露
+    }
+  }
+  //绘制watchdog状态
+  for (int i = 0; i < state_name.size(); i++) {
+    text_artist[i].attr("set_text")(state_name[i]);
+    watchdog_axes_ptr_->unwrap().attr("draw_artist")(text_artist[i]);
+  }
 }
 
 void AnimationFunctions::initSteerWheel(mpl::axes::Axes& axes){
@@ -316,7 +358,6 @@ void AnimationFunctions::initSteerWheel(mpl::axes::Axes& axes){
   auto circle = mpl::patches::Wedge(Args(py::make_tuple(0, 0), 5, 0, 360),kwargs);
   steering_wheel_axes_ptr_->add_patch(Args(circle.unwrap()));
   steering_wheel_axes_ptr_->set_aspect(Args("equal"));
-
 }
 
 }
