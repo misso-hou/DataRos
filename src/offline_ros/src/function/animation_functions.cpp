@@ -311,9 +311,8 @@ void AnimationFunctions::drawWatchdogState(){
   static vector<py::object> text_artist;
   auto watchdog = hmi_plt_data_.watchdog_state;
   vector<string> state_name = {"watchdog:"};
-  for (const auto& pair : watchdog.state) {
-    const auto& key = pair.first;
-    const auto& value = pair.second;
+  for (const auto& key : watchdog.state_order) {
+    int value = watchdog.state[key];
     string state = watchdog.FSMStateToString(value);
     string each_state_name = key + ": " + state;
     state_name.push_back(each_state_name);

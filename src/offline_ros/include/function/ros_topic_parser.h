@@ -103,6 +103,7 @@ struct ButtonAndSwitch {
 
 struct Watchdog {
     std::map<std::string, int> state;
+    std::vector<std::string> state_order = {"acc", "pilot", "noa", "aeb", "ldw", "dms", "bsd"};
     Watchdog() {
         state = {
             {"acc", 0},
