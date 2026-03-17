@@ -94,8 +94,7 @@ double BrakeTorqueObserver::computeCoastingForce(const double& v) {
     double roll_resistance = ComputeRollingResis();   // REVIEW:
     // double F_grav = ComputeGravityLoad(vehicle_mass, pitch);
     // double F_total = - F_aero - F_roll - F_grav;
-    double total_force = -aero_drag - roll_resistance;      //ignore insignificant external force
-    // std::cout << "debug->aero drag:" << aero_drag << "; rolling resistence:" << roll_resistance << std::endl;
+    double total_force = -aero_drag - roll_resistance;
     return total_force;
 }
 
@@ -120,14 +119,9 @@ double BrakeTorqueObserver::estimateBrakeGain(const double& v,
     double virtual_brake_torque = (acc_mes * model_params_.mass + coasting_force) * model_params_.wheel_radius;
     //calculate measured/real brake gain
     if(fabs(pressure) > 50){
-        // virtual_brake_gain = virtual_brake_torque / pressure;   //(brake_torque-wheel_inertia_torque)/pressure
-        // std::cout << "debug->virtual_brake_torque:" << virtual_brake_torque << "; pressure:" << pressure<<  "; virtual_brake_gain:" << virtual_brake_gain << std::endl;
         Eigen::Matrix<double,1,1> new_x;
         new_x << pressure;
         brake_gain_RLS_->update(new_x,virtual_brake_torque);
-        // auto updated_brake_gain = brake_gain_RLS_->estimatedCoefficients();                                                 
-        // brake_gain_ = updated_brake_gain[0];   
-        // std::cout << "debug-> RLS brake gain:" << brake_gain_ << std::endl;
     }                 
     auto updated_brake_gain = brake_gain_RLS_->estimatedCoefficients();                                                 
     brake_gain_ = updated_brake_gain[0];   

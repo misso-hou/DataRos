@@ -351,7 +351,7 @@ void AnimationFunctions::initSteerWheel(mpl::axes::Axes& axes){
   //------------------------------------steering wheel------------------------------------
   steering_wheel_axes_ptr_ = make_shared<mpl::axes::Axes>(axes);    
   steering_wheel_axes_ptr_->unwrap().attr("set_axis_off")();
-  steering_wheel_axes_ptr_->set_title(Args("steering wheel"));
+  // steering_wheel_axes_ptr_->set_title(Args("steering wheel"));
   //绘制圆环
   pybind11::dict kwargs("width"_a = 0.8, "facecolor"_a="k", "edgecolor"_a="r", "linewidth"_a=2, "alpha"_a=0.7);
   auto circle = mpl::patches::Wedge(Args(py::make_tuple(0, 0), 5, 0, 360),kwargs);
