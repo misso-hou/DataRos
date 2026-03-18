@@ -58,6 +58,38 @@ enum FSMState {
     RightBlindSpotLevelThreeAlarming = 34
 };
 
+struct ComputeData {
+    std::string local_time;
+    int adas_state;
+    std::map<std::string, float> Longi;
+    std::map<std::string, float> Horiz;
+    std::vector<std::string> Longi_order = {"ebs_cmd", 
+                                            "acc_mes",
+                                            "acc_ref", 
+                                            "speed", 
+                                            "pitch", 
+                                            "brake_pressure_filtered", 
+                                            "wheel_speed",
+                                            "brake_gain"};
+
+    std::vector<std::string> Horiz_order = {"steer_wheel_angle", 
+                                            "steer_wheel_torque_filtered", 
+                                            "wheel_speed",
+                                            "yaw_rate", 
+                                            "steer_wheel_angle_dot"};
+
+    // 构造函数：自动初始化map
+    ComputeData() {
+        adas_state = 0;
+        for (const std::string& key : Longi_order) {
+            Longi[key] = 0.0f;
+        }
+
+        for (const std::string& key : Horiz_order) {
+            Horiz[key] = 0.0f;
+        }
+    }
+};
 
 struct VehicleSteerData {
     std::string local_time;
@@ -180,6 +212,34 @@ enum class DataIndex{
     PILOT
 };
 
+struct RecordData {
+    std::map<std::string, float> data;
+    std::vector<std::string> order = {"SWA",
+                                      "SWT",
+                                      "WHEEL_SPEED",
+                                      "YAW_RATE",
+                                      "EBS_CMD",
+                                      "ACC_MES",
+                                      "ACC_REF",
+                                      "SPEED",
+                                      "PITCH",
+                                      "BRAKE_PRESSURE",
+                                      "PILOT"};
+    RecordData() {
+        for (const std::string& key : order) {
+            data[key] = 0.0f;
+        }
+    }
+
+    std::vector<float> getData() {
+        std::vector<float> data_vector;
+        for (const std::string& key : order) {
+            data_vector.push_back(data[key]);
+        }
+        return data_vector;
+    }
+};
+
 template <typename E>
 constexpr auto to_int(E e) noexcept {
     static_assert(std::is_enum<E>::value, "to_int only works with enum types");
@@ -195,6 +255,7 @@ class MsgParser {
     public:
         VehicleSteerData getVehicleSteerData();
         VehicleBrakeData getVehicleBrakeData();
+        std::shared_ptr<ComputeData> getVehicleData();
         HmiData getHmiData();
 
     private:
@@ -216,6 +277,8 @@ class MsgParser {
     private:   // 数据成员变量
         std::string local_time_;
         std::vector<float> record_data_;
+        std::shared_ptr<ComputeData> vehicle_data_;
+        std::shared_ptr<RecordData> rec_data_;
         bool first_flag_ = true;
         ButtonAndSwitch button_switch_;
         Watchdog watchdog_state_;

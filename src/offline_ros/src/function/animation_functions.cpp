@@ -9,6 +9,7 @@
 namespace modules {
 namespace animation {
 
+using namespace func::msg_parser;
 bool AnimationFunctions::frequencyCtrl(int T, int64_t& last_time_stamp) {
   int64_t current_time_stamp = TimeToolKit::TimeSpecSysCurrentMs();  // 获取当前时间戳
   // 时间控制
@@ -94,7 +95,7 @@ void AnimationFunctions::drawSteeringData(const string& time){
   }
 }
 
-void AnimationFunctions::drawSteeringWheel(const float& angle,const bool pilot, const float& line_width){
+void AnimationFunctions::drawSteeringWheel(const shared_ptr<ComputeData> data, const float& line_width){
   static bool once_flag = true;
   /******数据计算******/
   const int point_num = 7;
@@ -105,7 +106,7 @@ void AnimationFunctions::drawSteeringWheel(const float& angle,const bool pilot, 
   vector<float> frame_y(point_num);
   Eigen::Matrix2f rotateM;
   for(int i=0;i<point_num;i++){
-    float rotate_angle = fix_angle[i] + angle;
+    float rotate_angle = fix_angle[i] + data->Horiz.at("steer_wheel_angle");
     rotateM << cos(rotate_angle), -sin(rotate_angle), 
                 sin(rotate_angle), cos(rotate_angle);
     auto new_point = ((i & 1) == 0) ? rotateM * central_point : rotateM * origin_point;
@@ -119,6 +120,7 @@ void AnimationFunctions::drawSteeringWheel(const float& angle,const bool pilot, 
       frame_artist = steering_wheel_axes_ptr_->plot(Args(frame_x, frame_y), Kwargs("c"_a = "k", "lw"_a = line_width,"alpha"_a = 0.7)).unwrap().cast<py::list>()[0];
   }
   /*step03->draw artist*/
+  int pilot = static_cast<int>(data->adas_state);
   string color = pilot ? "k" : "orange"; //TODO:可以优化
   frame_artist.attr("set_color")(color);
   frame_artist.attr("set_data")(frame_x, frame_y);
@@ -195,7 +197,7 @@ void AnimationFunctions::drawBarPlot(const std::unordered_map<int, int>& frequen
   }
 }
 
-void AnimationFunctions::drawBrakeData(const string& time){
+void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> data){
   /******数据计算******/
   static bool once_flag = true;
   /*step01->实时数据更新*/
@@ -203,83 +205,68 @@ void AnimationFunctions::drawBrakeData(const string& time){
   static float test_tick = 0;
   test_tick += 0.4;
   time_array.push_back(test_tick);
-  int data_num = brake_plt_data_.size();
-  static mesh2D line_data(data_num);
-  static vector<py::object> lines_artist(data_num);
+  int data_num = data->Longi_order.size();
+  static map<string,vector<float>> line_data;
+  static map<string,py::object> lines_artists;
   static vector<py::object> legend_artist(3);
   //标注数据
   static py::object text_artist;
-  for(uint i=0; i<data_num; i++){
-    line_data[i].push_back(brake_plt_data_[i]);
+  for(const auto& key : data->Longi_order){
+    line_data[key].push_back(data->Longi.at(key));
   }
   
   if (time_array.size() > DATA_BUFFER) {
     time_array.erase(time_array.begin());
-    for(auto& line:line_data){
-      line.erase(line.begin());
+    for(auto& pair:line_data){
+      pair.second.erase(pair.second.begin());
     }
   }
   /*step02->static artist生成*/
-  static vector<string> lables = {"ebs_cmd","acc_mes", "acc_ref","speed","pitch" ,"brake_pressure", "wheel_speed", "brake_gain"};
   if (once_flag) {
     once_flag = false;
-    try {
-      py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
-      text_artist = data_axes01_ptr_->text(
-        Args(0.5, 1.0, "local time: " + time),
-        Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")
-      ).unwrap();
-      for (int i = 0; i < line_data.size(); i++) {
-        if(i==0 || i==5 || i==7){
-          lines_artist[i] = data_axes01_ptr_->plot(
-            Args(time_array, line_data[i]), 
-            Kwargs("c"_a = COLORS[i % COLORS.size()], "lw"_a = 1.0, "label"_a = lables[i])
-          ).unwrap().cast<py::list>()[0];
-        }else if(i==1 || i==2 || i==4){
-          lines_artist[i] = data_axes02_ptr_->plot(
-            Args(time_array, line_data[i]), 
-            Kwargs("c"_a = COLORS[i % COLORS.size()], "lw"_a = 1.0, "label"_a = lables[i])
-          ).unwrap().cast<py::list>()[0];
-        }else if(i==3 || i==6){
-          lines_artist[i] = data_axes03_ptr_->plot(
-            Args(time_array, line_data[i]), 
-            Kwargs("c"_a = COLORS[i % COLORS.size()], "lw"_a = 1.0, "label"_a = lables[i])
-          ).unwrap().cast<py::list>()[0];
-        }
+    py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
+    text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, "local time: " + data->local_time),
+                                         Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")
+                                        ).unwrap();
+    int color_count = 0;
+    for (const std::string& key : data->Longi_order) {
+      if(key == "ebs_cmd" || key == "brake_pressure_filtered" || key == "brake_gain"){
+        lines_artists[key] = data_axes01_ptr_->plot(Args(time_array, line_data.at(key)), 
+                                                    Kwargs("c"_a = COLORS[color_count % COLORS.size()], "lw"_a = 1.0, "label"_a = key)
+                                                  ).unwrap().cast<py::list>()[0];
+      }else if(key == "acc_mes" || key == "acc_ref" || key == "pitch"){
+        lines_artists[key] = data_axes02_ptr_->plot(Args(time_array, line_data.at(key)), 
+                                                    Kwargs("c"_a = COLORS[color_count % COLORS.size()], "lw"_a = 1.0, "label"_a = key)
+                                                    ).unwrap().cast<py::list>()[0];
+      }else if(key == "speed" || key == "wheel_speed"){
+        lines_artists[key] = data_axes03_ptr_->plot(Args(time_array, line_data.at(key)), 
+                                                    Kwargs("c"_a = COLORS[color_count % COLORS.size()], "lw"_a = 1.0, "label"_a = key)
+                                                    ).unwrap().cast<py::list>()[0];
       }
-      legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
-      legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
-      legend_artist[2] = data_axes03_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
-    } catch (const exception& e) {
-      cout << "[Brake] 首次执行异常: " << e.what() << endl;
-      throw; // 重新抛出，让bug暴露
+      color_count++;
+    }
+    legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+    legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+    legend_artist[2] = data_axes03_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+  }
+
+  for(auto& line_artist : lines_artists){
+    auto key = line_artist.first;
+    line_artist.second.attr("set_data")(time_array, line_data.at(key));
+    if(key == "ebs_cmd" || key == "brake_pressure_filtered" || key == "brake_gain"){
+      data_axes01_ptr_->unwrap().attr("draw_artist")(line_artist.second);
+    }else if(key == "acc_mes" || key == "acc_ref" || key == "pitch"){
+      data_axes02_ptr_->unwrap().attr("draw_artist")(line_artist.second);
+    }else if(key == "speed" || key == "wheel_speed"){
+      data_axes03_ptr_->unwrap().attr("draw_artist")(line_artist.second);
     }
   }
   
-  for (int i = 0; i < lines_artist.size(); i++) {
-    try {
-      lines_artist[i].attr("set_data")(time_array, line_data[i]);
-      if(i==0 || i==5 || i==7){
-        data_axes01_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
-      }else if(i==1 || i==2 || i==4){
-        data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
-      }else if(i==3 || i==6){
-        data_axes03_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
-      }
-    } catch (const exception& e) {
-      cout << "[Brake] 更新线条 " << i << " 异常: " << e.what() << endl;
-    }
-  }
-  
-  try {
-    text_artist.attr("set_text")("local time: " + time);
-    data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
-    data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
-    data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
-    data_axes03_ptr_->unwrap().attr("draw_artist")(legend_artist[2]);
-  } catch (const exception& e) {
-    cout << "[Brake] 更新文本/图例异常: " << e.what() << endl;
-  }
+  text_artist.attr("set_text")("local time: " + data->local_time);
+  data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
+  data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
+  data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
+  data_axes03_ptr_->unwrap().attr("draw_artist")(legend_artist[2]);
   
   auto axes_xlim = data_axes01_ptr_->get_xlim();
   if (time_array.back() > get<1>(axes_xlim) - 5) {

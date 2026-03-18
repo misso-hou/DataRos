@@ -47,22 +47,14 @@ int main(int argc, char *argv[]) {
   ros::Rate rt(20);
   while (ros::ok()) {
     ros::spinOnce();
-    auto realtime_data = msg_parser.getVehicleBrakeData();
-    vector<float> data_row(8);
-    data_row.at(0) = realtime_data.ebs_cmd;
-    data_row.at(1) = realtime_data.acc_mes;
-    data_row.at(2) = realtime_data.acc_ref;
-    data_row.at(3) = realtime_data.speed;
-    data_row.at(4) = realtime_data.pitch;
-    data_row.at(5) = realtime_data.brake_pressure_filtered*(-0.01);
-    data_row.at(6) = realtime_data.wheel_speed;
-    auto brake_gain = observer.estimateBrakeGain(realtime_data.speed,
-                                                 realtime_data.acc_mes,
-                                                 realtime_data.brake_pressure_filtered);   
-    data_row.at(7) = brake_gain*(0.01);
-    Animator->SetBrakeData(data_row);
+    auto vehicle_data = msg_parser.getVehicleData();
+    auto brake_gain = observer.estimateBrakeGain(vehicle_data->Longi.at("speed"),
+                                                 vehicle_data->Longi.at("acc_mes"),
+                                                 vehicle_data->Longi.at("brake_pressure_filtered"));   
+    vehicle_data->Longi.at("brake_pressure_filtered") *= -0.01;
+    vehicle_data->Longi.at("brake_gain") = brake_gain*0.01;
     /*------动画显示-----*/
-    Animator->BrakeMonitor(realtime_data.local_time,0,false); //TODO:
+    Animator->BrakeMonitor(vehicle_data);
     rt.sleep();
   }
   pybind11::finalize_interpreter();
