@@ -32,19 +32,11 @@ MsgParser::MsgParser(int argc, char *argv[]) {
         return;
     }
     // 可选：写入CSV表头
-    csv_file_ << "timestamp,\
-                  SWA,\
-                  SWT,\
-                  WHEEL_SPEED,\
-                  YAW_RATE,\
-                  EBS_CMD,\
-                  ACC_MES,\
-                  ACC_REF,\
-                  SPEED,\
-                  PITCH,\
-                  BRAKE_PRESSURE,\
-                  PILOT\n";
-    record_data_.resize(to_int(DataIndex::PILOT)+1);
+    csv_file_ << "timestamp" << ",";
+    for(const auto& key:rec_data_->order){
+        csv_file_ << key << ",";
+    }
+    csv_file_ << "\n";
     dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
     ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
     watchdog_sub_ = nh_.subscribe("/watchdog/current_state",1000, &MsgParser::watchdog_callback, this);
@@ -81,22 +73,22 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
         //steering wheel angle speed calculation
         if(first_flag_){
             first_flag_ = false;
-            swt_filtered_ = rec_data_->data.at("SWT");
-            brake_pressure_filtered_ = rec_data_->data.at("BRAKE_PRESSURE");
+            swt_filtered_ = rec_data_->data.at("steer_wheel_torque_filtered");
+            brake_pressure_filtered_ = rec_data_->data.at("brake_pressure");
         }else{
-            swa_dot_ = (dbw_report.steering_report().steering_wheel_angle() - rec_data_->data.at("SWA")) / TS;
+            swa_dot_ = (dbw_report.steering_report().steering_wheel_angle() - rec_data_->data.at("steer_wheel_angle")) / TS;
         }
         // realtime data
-        rec_data_->data.at("SWA") = dbw_report.steering_report().steering_wheel_angle();
-        rec_data_->data.at("SWT") = dbw_report.steering_report().steering_wheel_torque();
-        rec_data_->data.at("WHEEL_SPEED") = dbw_report.wheel_speed_report().front_axle_speed();
-        rec_data_->data.at("YAW_RATE") = dbw_report.vehicle_dynamic().angular_velocity().z();
-        rec_data_->data.at("BRAKE_PRESSURE") = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
-        rec_data_->data.at("SPEED") = dbw_report.steering_report().speed();
-        rec_data_->data.at("PILOT") = dbw_report.superpilot_enabled();
+        rec_data_->data.at("steer_wheel_angle") = dbw_report.steering_report().steering_wheel_angle();
+        rec_data_->data.at("steer_wheel_torque_filtered") = dbw_report.steering_report().steering_wheel_torque();
+        rec_data_->data.at("wheel_speed") = dbw_report.wheel_speed_report().front_axle_speed();
+        rec_data_->data.at("yaw_rate") = dbw_report.vehicle_dynamic().angular_velocity().z();
+        rec_data_->data.at("brake_pressure") = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
+        rec_data_->data.at("speed") = dbw_report.steering_report().speed();
+        rec_data_->data.at("adas_state") = dbw_report.superpilot_enabled();
         // for display and calculation
-        swt_filtered_ = Math::LowPassFilter(rec_data_->data.at("SWT"),swt_filtered_,0.05);
-        brake_pressure_filtered_ = Math::LowPassFilter(rec_data_->data.at("BRAKE_PRESSURE"),brake_pressure_filtered_,0.05);
+        swt_filtered_ = Math::LowPassFilter(rec_data_->data.at("steer_wheel_torque_filtered"),swt_filtered_,0.05);
+        brake_pressure_filtered_ = Math::LowPassFilter(rec_data_->data.at("brake_pressure"),brake_pressure_filtered_,0.05);
         // HMI data -> buttons and switches
         updateHmiData(dbw_report);
     }
@@ -150,10 +142,10 @@ void MsgParser::ctrl_callback(const std_msgs::String::ConstPtr& msg)
     // 提取数据
     {
         std::lock_guard<std::mutex> lock(data_mutex_);
-        rec_data_->data.at("EBS_CMD") = control_cmd.brake_cmd().target_acceleration();
-        rec_data_->data.at("ACC_MES") = control_cmd.debug_cmd().a_report();
-        rec_data_->data.at("ACC_REF") = control_cmd.debug_cmd().a_target();
-        rec_data_->data.at("PITCH") =  control_cmd.debug_cmd().pitch_angle();
+        rec_data_->data.at("ebs_cmd") = control_cmd.brake_cmd().target_acceleration();
+        rec_data_->data.at("acc_mes") = control_cmd.debug_cmd().a_report();
+        rec_data_->data.at("acc_ref") = control_cmd.debug_cmd().a_target();
+        rec_data_->data.at("pitch") =  control_cmd.debug_cmd().pitch_angle();
     }
 }
 
@@ -204,43 +196,43 @@ std::shared_ptr<ComputeData> MsgParser::getVehicleData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     vehicle_data_->local_time = local_time_;
     //steering data
-    vehicle_data_->Horiz.at("steer_wheel_angle") = rec_data_->data.at("SWA");
+    vehicle_data_->Horiz.at("steer_wheel_angle") = rec_data_->data.at("steer_wheel_angle");
     vehicle_data_->Horiz.at("steer_wheel_torque_filtered") = swt_filtered_;
-    vehicle_data_->Horiz.at("wheel_speed") = rec_data_->data.at("WHEEL_SPEED");
-    vehicle_data_->Horiz.at("yaw_rate") = rec_data_->data.at("YAW_RATE");
+    vehicle_data_->Horiz.at("wheel_speed") = rec_data_->data.at("wheel_speed");
+    vehicle_data_->Horiz.at("yaw_rate") = rec_data_->data.at("yaw_rate");
     vehicle_data_->Horiz.at("steer_wheel_angle_dot") = swa_dot_;
     //brake data
-    vehicle_data_->Longi.at("ebs_cmd") = rec_data_->data.at("EBS_CMD");
-    vehicle_data_->Longi.at("acc_mes") = rec_data_->data.at("ACC_MES");
-    vehicle_data_->Longi.at("acc_ref") = rec_data_->data.at("ACC_REF");
-    vehicle_data_->Longi.at("speed") = rec_data_->data.at("SPEED");
-    vehicle_data_->Longi.at("pitch") = rec_data_->data.at("PITCH");
+    vehicle_data_->Longi.at("ebs_cmd") = rec_data_->data.at("ebs_cmd");
+    vehicle_data_->Longi.at("acc_mes") = rec_data_->data.at("acc_mes");
+    vehicle_data_->Longi.at("acc_ref") = rec_data_->data.at("acc_ref");
+    vehicle_data_->Longi.at("speed") = rec_data_->data.at("speed");
+    vehicle_data_->Longi.at("pitch") = rec_data_->data.at("pitch");
     vehicle_data_->Longi.at("brake_pressure_filtered") = brake_pressure_filtered_;
-    vehicle_data_->Longi.at("wheel_speed") = rec_data_->data.at("WHEEL_SPEED");
+    vehicle_data_->Longi.at("wheel_speed") = rec_data_->data.at("wheel_speed");
     return vehicle_data_;
 }
 
 VehicleSteerData MsgParser::getVehicleSteerData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
-            record_data_[to_int(DataIndex::SWA)],
+            record_data_[to_int(DataIndex::steer_wheel_angle)],
             swt_filtered_,
-            record_data_[to_int(DataIndex::WHEEL_SPEED)],
-            record_data_[to_int(DataIndex::YAW_RATE)],
+            record_data_[to_int(DataIndex::wheel_speed)],
+            record_data_[to_int(DataIndex::yaw_rate)],
             swa_dot_,
-            static_cast<bool>(record_data_[to_int(DataIndex::PILOT)])};
+            static_cast<bool>(record_data_[to_int(DataIndex::adas_state)])};
 }
 
 VehicleBrakeData MsgParser::getVehicleBrakeData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
-            record_data_[to_int(DataIndex::EBS_CMD)],
-            record_data_[to_int(DataIndex::ACC_MES)],
-            record_data_[to_int(DataIndex::ACC_REF)],
-            record_data_[to_int(DataIndex::SPEED)],
-            record_data_[to_int(DataIndex::PITCH)],
+            record_data_[to_int(DataIndex::ebs_cmd)],
+            record_data_[to_int(DataIndex::acc_mes)],
+            record_data_[to_int(DataIndex::acc_ref)],
+            record_data_[to_int(DataIndex::speed)],
+            record_data_[to_int(DataIndex::pitch)],
             brake_pressure_filtered_,
-            record_data_[to_int(DataIndex::WHEEL_SPEED)]};
+            record_data_[to_int(DataIndex::wheel_speed)]};
 }
 
 HmiData MsgParser::getHmiData() {

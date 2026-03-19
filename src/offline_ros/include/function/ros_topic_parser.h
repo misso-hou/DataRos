@@ -199,32 +199,33 @@ struct HmiData {
 };
 
 enum class DataIndex{
-    SWA = 0,
-    SWT,
-    WHEEL_SPEED,
-    YAW_RATE,
-    EBS_CMD,
-    ACC_MES,
-    ACC_REF,
-    SPEED,
-    PITCH,
-    BRAKE_PRESSURE,
-    PILOT
+    steer_wheel_angle = 0,
+    steer_wheel_torque_filtered,
+    wheel_speed,
+    yaw_rate,
+    ebs_cmd,
+    acc_mes,
+    acc_ref,
+    speed,
+    pitch,
+    brake_pressure,
+    adas_state
 };
 
 struct RecordData {
     std::map<std::string, float> data;
-    std::vector<std::string> order = {"SWA",
-                                      "SWT",
-                                      "WHEEL_SPEED",
-                                      "YAW_RATE",
-                                      "EBS_CMD",
-                                      "ACC_MES",
-                                      "ACC_REF",
-                                      "SPEED",
-                                      "PITCH",
-                                      "BRAKE_PRESSURE",
-                                      "PILOT"};
+
+    std::vector<std::string> order = {"steer_wheel_angle",
+                                      "steer_wheel_torque_filtered",
+                                      "wheel_speed",
+                                      "yaw_rate",
+                                      "ebs_cmd",
+                                      "acc_mes",
+                                      "acc_ref",
+                                      "speed",
+                                      "pitch",
+                                      "brake_pressure",
+                                      "adas_state"};
     RecordData() {
         for (const std::string& key : order) {
             data[key] = 0.0f;

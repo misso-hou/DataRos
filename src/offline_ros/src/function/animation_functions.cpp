@@ -47,7 +47,7 @@ void AnimationFunctions::drawSteeringData(const string& time){
     }
   }
   /*step02->static artist生成*/
-  static vector<string> lables = {"SWA", "SWT", "wheel_speed", "yaw_rate", "SWA_dot", "bias_T","l_mean","s_mean"};
+  static vector<string> lables = {"steer_wheel_angle", "steer_wheel_torque_filtered", "wheel_speed", "yaw_rate", "SWA_dot", "bias_T","l_mean","s_mean"};
   if (once_flag) {
     once_flag = false;
     py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");

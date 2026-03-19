@@ -66,6 +66,67 @@ vector<vector<float>> DisplayControl::RowDataReader(string file_name,vector<long
   return all_data;
 }
 
+map<string,vector<float>> DisplayControl::ColumnDataReader(string file_name, vector<long long>& time, int row_num, int bias_index) {
+  ifstream file(file_name);  // csv文件导入
+  if (!file.is_open()) {
+      cout << file_name << "----->" << "文件不存在" << endl;
+      return {};  // 返回空容器，避免后续操作出错
+  }
+
+  // 先读取表头行，同时获取列数
+  string header_line;
+  getline(file, header_line);
+  stringstream header_ss(header_line);
+  string header_item;
+  vector<string> field_names;  // 存储所有字段名（保留顺序）
+  map<string,vector<float>> data;
+  // 先读取并跳过第一列（时间戳列）
+  getline(header_ss, header_item, ',');
+  field_names.push_back("timestamp");
+  while (getline(header_ss, header_item, ',')) {
+    field_names.push_back(header_item);  // 记录字段名顺序
+    data[header_item] = {};
+  }
+
+  vector<long long> exact_timestamps;  // 存储精确时间戳
+
+  string line;
+  int line_index = 1;  // 从第二行（数据行）开始计数
+  while (getline(file, line)) {  // 按行提取csv文件
+    // 只处理满足条件的行（原逻辑保留）
+    if ((line_index - bias_index) % row_num != 0) {
+        line_index++;
+        continue;
+    }
+
+    stringstream s1(line);
+    string charItem;
+    int col_count = 0;  // 列索引（从0开始）
+    long long exact_ts = 0;
+
+    /* 按列解析当前行数据 */
+    while (getline(s1, charItem, ',')) {
+      string current_field = field_names[col_count];  // 当前列的字段名
+      if (col_count == 0) {  // 第一列：时间戳
+          exact_ts = stoll(charItem);
+          exact_timestamps.push_back(exact_ts);
+      } else {  // 其他列：按列索引存入对应容器
+          float fItem = stof(charItem);
+          data.at(current_field).push_back(fItem);
+      }
+      col_count++;
+    }
+    line_index++;
+  }
+
+  // 关闭文件（原代码漏了，补充上）
+  file.close();
+
+  // 赋值时间戳输出参数
+  time = exact_timestamps;
+  return data;
+}
+
 /**
  * @brief:获取一个字符输入(不需要按enter)
  * @return:键盘输入的字符
@@ -237,7 +298,7 @@ void DisplayControl::SetParam(int argc, char *argv[]) {
 /**
  *@brief:csv数据提取
  */
-mesh2D DisplayControl::ExtractData(int argc, char *argv[]) {
+mesh2D DisplayControl::ExtractDataInRow(int argc, char *argv[]) {
   string filename;
   if(argc <2){
     throw std::runtime_error("!!!!INPUT CSV FILE NAME!!!!");
@@ -251,6 +312,22 @@ mesh2D DisplayControl::ExtractData(int argc, char *argv[]) {
   auto data_mat2D = RowDataReader(data_file, ts_, 1, 1);
   data_length_ = data_mat2D.size();
   return data_mat2D;
+}
+
+map<string,vector<float>> DisplayControl::ExtractDataInColumn(int argc, char *argv[]) {
+  string filename;
+  if(argc <2){
+    throw std::runtime_error("!!!!INPUT CSV FILE NAME!!!!");
+  }else {
+    filename = argv[1];
+  }
+  // 从当前工作目录出发
+  std::string data_file = "src/offline_ros/data/" + filename + ".csv";  // 相对当前目录
+  std::cout << "数据文件: " << data_file << std::endl;
+  //数据提取
+  auto data = ColumnDataReader(data_file, ts_, 1, 1);
+  data_length_ = data.begin()->second.size();
+  return data;
 }
 
 string DisplayControl::getLogTimestamp(const int index){

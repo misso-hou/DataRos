@@ -78,20 +78,20 @@ file(GLOB SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 # )
 
 # --------------------刹车数据播放器节点--------------------
-# add_executable(brake_play_node
-#   src/RosNode/brake_play_node.cpp      
-#   src/function/ros_topic_parser.cpp    
-#   src/function/animation.cpp
-#   src/function/animation_functions.cpp
-#   src/function/display_control.cpp
-#   src/algorithm/observer.cpp
-# )
+add_executable(brake_play_node
+  src/RosNode/brake_play_node.cpp      
+  src/function/ros_topic_parser.cpp    
+  src/function/animation.cpp
+  src/function/animation_functions.cpp
+  src/function/display_control.cpp
+  src/algorithm/observer.cpp
+)
 
-# # ROS 与外部库的链接
-# target_link_libraries(brake_play_node
-#   ${COMMON_LIBS}
-#   ${VISUALIZATION_LIBS}
-# )
+# ROS 与外部库的链接
+target_link_libraries(brake_play_node
+  ${COMMON_LIBS}
+  ${VISUALIZATION_LIBS}
+)
 
 # # --------------------转向实时运算节点--------------------
 # add_executable(steer_realtime_node
@@ -151,7 +151,7 @@ target_link_libraries(ros_listener_node
 # 安装执行文件
 install(TARGETS 
   # steer_play_node 
-  # brake_play_node 
+  brake_play_node 
   # ros_listener_node 
   # steer_realtime_node 
   brake_realtime_node

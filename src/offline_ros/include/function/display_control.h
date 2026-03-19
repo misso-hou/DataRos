@@ -27,14 +27,18 @@ class DisplayControl
 
     public:
         /*读csv数据函数*/
-        vector<vector<float>> RowDataReader(string file_name, vector<long long>& time, int row_num, int bias_index);
         string getLogTimestamp(const int index);
         void SetParam(int argc, char *argv[]);
-        mesh2D ExtractData(int argc, char *argv[]);
+        mesh2D ExtractDataInRow(int argc, char *argv[]);
+        map<string,vector<float>> ExtractDataInColumn(int argc, char *argv[]);
         // 按键控制相关函数
         char GetKey();
         string GetKeyWithTimeout(int timeout_ms);
         bool KeyboardCtrl(int &index);
+    
+    private:
+        vector<vector<float>> RowDataReader(string file_name, vector<long long>& time, int row_num, int bias_index);
+        map<string,vector<float>> ColumnDataReader(string file_name, vector<long long>& time, int row_num, int bias_index);
 
     private:
         //提取数据容器
@@ -45,7 +49,6 @@ class DisplayControl
         //低通滤波
         float filtered_data01_ = 0.0;
         float filtered_data02_ = 0.0;
-        int data_length_;
 
     public:
         //变量定义
@@ -53,6 +56,7 @@ class DisplayControl
         int start_index_;
         bool back_;
         bool erase_;
+        int data_length_;
 };
 
 
