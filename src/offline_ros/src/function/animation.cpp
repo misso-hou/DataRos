@@ -264,7 +264,7 @@ void Animation::SetHmiData(const func::msg_parser::HmiData hmi_data) {
   hmi_plt_data_ = hmi_data;
 }
 
-void Animation::SWTorqueMonitor(const shared_ptr<ComputeData> data,
+void Animation::SWTorqueMonitor(const shared_ptr<ComputeData> vehicel_data,
                                 const std::unordered_map<int, int>& freq01,
                                 const std::unordered_map<int, int>& freq02) {
   /******动画频率设置******/
@@ -272,24 +272,24 @@ void Animation::SWTorqueMonitor(const shared_ptr<ComputeData> data,
   if (frequencyCtrl(DURATION, last_sim_time_stamp)) return;
   /******绘图******/
   canvas_restore_region(data_figure_ptr_->unwrap(), data_background_);
-  drawSteeringData(data->local_time);
-  drawSteeringWheel(data,20.0);
+  drawSteeringData(vehicel_data->local_time);
+  drawSteeringWheel(vehicel_data,20.0);
   drawBarPlot(freq01,freq02);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 
-void Animation::BrakeMonitor(const shared_ptr<func::msg_parser::ComputeData> data) {
+void Animation::BrakeMonitor(const shared_ptr<func::msg_parser::ComputeData> vehicel_data) {
   /******动画频率设置******/
   static int64_t last_sim_time_stamp = 0;
   if (frequencyCtrl(DURATION, last_sim_time_stamp)) return;
   /******绘图******/
   canvas_restore_region(data_figure_ptr_->unwrap(), data_background_);
-  drawBrakeData(data);
-  drawSteeringWheel(data,10.0);
+  drawBrakeData(vehicel_data);
+  drawSteeringWheel(vehicel_data,10.0);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 
-void Animation::VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> data) {
+void Animation::VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> vehicel_data) {
   /******动画频率设置******/
   static int64_t last_sim_time_stamp = 0;
   if (frequencyCtrl(DURATION, last_sim_time_stamp)) return;
@@ -298,7 +298,7 @@ void Animation::VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> d
   drawHmiData();
   drawWatchdogState();
   drawSteeringData(hmi_plt_data_.local_time);
-  drawSteeringWheel(data,10.0); //TODO:
+  drawSteeringWheel(vehicel_data,10.0);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 

@@ -22,11 +22,11 @@ class Animation : public utilities::Singleton<Animation>, public AnimationFuncti
   void SetSteerWheelData(const vector<float>& new_data);
   void SetBrakeData(const vector<float>& new_data);
   void SetHmiData(const func::msg_parser::HmiData hmi_data);
-  void SWTorqueMonitor(const shared_ptr<func::msg_parser::ComputeData> data,
+  void SWTorqueMonitor(const shared_ptr<func::msg_parser::ComputeData> vehicel_data,
                        const std::unordered_map<int, int>& freq01,
                        const std::unordered_map<int, int>& freq02);
-  void BrakeMonitor(const shared_ptr<func::msg_parser::ComputeData> data);
-  void VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> data);
+  void BrakeMonitor(const shared_ptr<func::msg_parser::ComputeData> vehicel_data);
+  void VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> vehicel_data);
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
   void InitVehicleMonitor();

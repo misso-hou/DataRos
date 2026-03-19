@@ -36,31 +36,31 @@ int main(int argc, char *argv[]) {
   ALG::BrakeTorqueObserver observer;
   pybind11::scoped_interpreter guard{};
   disp_ctrl_ptr->SetParam(argc, argv);
-  auto data = disp_ctrl_ptr->ExtractDataInColumn(argc, argv);
+  auto record_data = disp_ctrl_ptr->ExtractDataInColumn(argc, argv);
   Animator->InitBrakeSysPlt();
   for (int i = disp_ctrl_ptr->start_index_; i < disp_ctrl_ptr->data_length_;)  //数据行遍历
   {
     //键盘控制
     if (!disp_ctrl_ptr->KeyboardCtrl(i)) break;
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
-    auto data_ptr = std::make_shared<func::msg_parser::ComputeData>();
+    auto vehicel_data = std::make_shared<func::msg_parser::ComputeData>();
     //数据获取
-    data_ptr->Longi.at("ebs_cmd") = data.at("ebs_cmd")[i];
-    data_ptr->Longi.at("acc_mes") = data.at("acc_mes")[i];
-    data_ptr->Longi.at("acc_ref") = data.at("acc_ref")[i];
-    data_ptr->Longi.at("speed") = data.at("speed")[i];
-    data_ptr->Longi.at("pitch") = data.at("pitch")[i];
-    data_ptr->Longi.at("wheel_speed") = data.at("wheel_speed")[i];
-    static float filtered_bp = data.at("brake_pressure")[i];
-    filtered_bp = Math::LowPassFilter(data.at("brake_pressure")[i],filtered_bp,0.1);
-    auto brake_gain = observer.estimateBrakeGain(data_ptr->Longi.at("speed"),
-                                                 data_ptr->Longi.at("acc_mes"),
+    vehicel_data->data.at("ebs_cmd") = record_data.at("ebs_cmd")[i];
+    vehicel_data->data.at("acc_mes") = record_data.at("acc_mes")[i];
+    vehicel_data->data.at("acc_ref") = record_data.at("acc_ref")[i];
+    vehicel_data->data.at("speed") = record_data.at("speed")[i];
+    vehicel_data->data.at("pitch") = record_data.at("pitch")[i];
+    vehicel_data->data.at("wheel_speed") = record_data.at("wheel_speed")[i];
+    static float filtered_bp = record_data.at("brake_pressure")[i];
+    filtered_bp = Math::LowPassFilter(record_data.at("brake_pressure")[i],filtered_bp,0.1);
+    auto brake_gain = observer.estimateBrakeGain(vehicel_data->data.at("speed"),
+                                                 vehicel_data->data.at("acc_mes"),
                                                  filtered_bp);
-    data_ptr->Longi.at("brake_pressure_filtered") = filtered_bp*(-0.01);
-    data_ptr->Longi.at("brake_gain") = brake_gain*(0.01);
-    data_ptr->Horiz.at("steer_wheel_angle") = data.at("steer_wheel_angle")[i];
+    vehicel_data->data.at("brake_pressure_filtered") = filtered_bp*(-0.01);
+    vehicel_data->data.at("brake_gain") = brake_gain*(0.01);
+    vehicel_data->data.at("steer_wheel_angle") = record_data.at("steer_wheel_angle")[i];
     /*------动画显示-----*/
-    Animator->BrakeMonitor(data_ptr);
+    Animator->BrakeMonitor(vehicel_data);
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
     int64_t remaining_T = disp_ctrl_ptr->cycle_time_ - (end_time - start_time);
     if (remaining_T > 0) {

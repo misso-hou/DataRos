@@ -48,11 +48,11 @@ int main(int argc, char *argv[]) {
   while (ros::ok()) {
     ros::spinOnce();
     auto vehicle_data = msg_parser.getVehicleData();
-    auto brake_gain = observer.estimateBrakeGain(vehicle_data->Longi.at("speed"),
-                                                 vehicle_data->Longi.at("acc_mes"),
-                                                 vehicle_data->Longi.at("brake_pressure_filtered"));   
-    vehicle_data->Longi.at("brake_pressure_filtered") *= -0.01;
-    vehicle_data->Longi.at("brake_gain") = brake_gain*0.01;
+    auto brake_gain = observer.estimateBrakeGain(vehicle_data->data.at("speed"),
+                                                 vehicle_data->data.at("acc_mes"),
+                                                 vehicle_data->data.at("brake_pressure_filtered"));   
+    vehicle_data->data.at("brake_pressure_filtered") *= -0.01;
+    vehicle_data->data.at("brake_gain") = brake_gain*0.01;
     /*------动画显示-----*/
     Animator->BrakeMonitor(vehicle_data);
     rt.sleep();

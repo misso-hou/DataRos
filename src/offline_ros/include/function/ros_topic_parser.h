@@ -61,32 +61,26 @@ enum FSMState {
 struct ComputeData {
     std::string local_time;
     int adas_state;
-    std::map<std::string, float> Longi;
-    std::map<std::string, float> Horiz;
-    std::vector<std::string> Longi_order = {"ebs_cmd", 
-                                            "acc_mes",
-                                            "acc_ref", 
-                                            "speed", 
-                                            "pitch", 
-                                            "brake_pressure_filtered", 
-                                            "wheel_speed",
-                                            "brake_gain"};
-
-    std::vector<std::string> Horiz_order = {"steer_wheel_angle", 
-                                            "steer_wheel_torque_filtered", 
-                                            "wheel_speed",
-                                            "yaw_rate", 
-                                            "steer_wheel_angle_dot"};
+    std::vector<std::string> order = {"ebs_cmd", 
+                                      "acc_mes",
+                                      "acc_ref", 
+                                      "speed", 
+                                      "pitch", 
+                                      "brake_pressure_filtered", 
+                                      "wheel_speed",
+                                      "brake_gain",
+                                      "steer_wheel_angle", 
+                                      "steer_wheel_torque_filtered", 
+                                      "yaw_rate", 
+                                      "steer_wheel_angle_dot"
+                                      };
+    std::map<std::string, float> data;
 
     // 构造函数：自动初始化map
     ComputeData() {
         adas_state = 0;
-        for (const std::string& key : Longi_order) {
-            Longi[key] = 0.0f;
-        }
-
-        for (const std::string& key : Horiz_order) {
-            Horiz[key] = 0.0f;
+        for (const std::string& key : order) {
+            data[key] = 0.0f;
         }
     }
 };

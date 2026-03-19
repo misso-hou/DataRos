@@ -196,19 +196,18 @@ std::shared_ptr<ComputeData> MsgParser::getVehicleData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     vehicle_data_->local_time = local_time_;
     //steering data
-    vehicle_data_->Horiz.at("steer_wheel_angle") = rec_data_->data.at("steer_wheel_angle");
-    vehicle_data_->Horiz.at("steer_wheel_torque_filtered") = swt_filtered_;
-    vehicle_data_->Horiz.at("wheel_speed") = rec_data_->data.at("wheel_speed");
-    vehicle_data_->Horiz.at("yaw_rate") = rec_data_->data.at("yaw_rate");
-    vehicle_data_->Horiz.at("steer_wheel_angle_dot") = swa_dot_;
+    vehicle_data_->data.at("steer_wheel_angle") = rec_data_->data.at("steer_wheel_angle");
+    vehicle_data_->data.at("steer_wheel_torque_filtered") = swt_filtered_;
+    vehicle_data_->data.at("wheel_speed") = rec_data_->data.at("wheel_speed");
+    vehicle_data_->data.at("yaw_rate") = rec_data_->data.at("yaw_rate");
+    vehicle_data_->data.at("steer_wheel_angle_dot") = swa_dot_;
     //brake data
-    vehicle_data_->Longi.at("ebs_cmd") = rec_data_->data.at("ebs_cmd");
-    vehicle_data_->Longi.at("acc_mes") = rec_data_->data.at("acc_mes");
-    vehicle_data_->Longi.at("acc_ref") = rec_data_->data.at("acc_ref");
-    vehicle_data_->Longi.at("speed") = rec_data_->data.at("speed");
-    vehicle_data_->Longi.at("pitch") = rec_data_->data.at("pitch");
-    vehicle_data_->Longi.at("brake_pressure_filtered") = brake_pressure_filtered_;
-    vehicle_data_->Longi.at("wheel_speed") = rec_data_->data.at("wheel_speed");
+    vehicle_data_->data.at("ebs_cmd") = rec_data_->data.at("ebs_cmd");
+    vehicle_data_->data.at("acc_mes") = rec_data_->data.at("acc_mes");
+    vehicle_data_->data.at("acc_ref") = rec_data_->data.at("acc_ref");
+    vehicle_data_->data.at("speed") = rec_data_->data.at("speed");
+    vehicle_data_->data.at("pitch") = rec_data_->data.at("pitch");
+    vehicle_data_->data.at("brake_pressure_filtered") = brake_pressure_filtered_;
     return vehicle_data_;
 }
 

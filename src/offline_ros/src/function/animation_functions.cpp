@@ -95,7 +95,7 @@ void AnimationFunctions::drawSteeringData(const string& time){
   }
 }
 
-void AnimationFunctions::drawSteeringWheel(const shared_ptr<ComputeData> data, const float& line_width){
+void AnimationFunctions::drawSteeringWheel(const shared_ptr<ComputeData> vehicle_data, const float& line_width){
   static bool once_flag = true;
   /******数据计算******/
   const int point_num = 7;
@@ -106,7 +106,7 @@ void AnimationFunctions::drawSteeringWheel(const shared_ptr<ComputeData> data, c
   vector<float> frame_y(point_num);
   Eigen::Matrix2f rotateM;
   for(int i=0;i<point_num;i++){
-    float rotate_angle = fix_angle[i] + data->Horiz.at("steer_wheel_angle");
+    float rotate_angle = fix_angle[i] + vehicle_data->data.at("steer_wheel_angle");
     rotateM << cos(rotate_angle), -sin(rotate_angle), 
                 sin(rotate_angle), cos(rotate_angle);
     auto new_point = ((i & 1) == 0) ? rotateM * central_point : rotateM * origin_point;
@@ -120,7 +120,7 @@ void AnimationFunctions::drawSteeringWheel(const shared_ptr<ComputeData> data, c
       frame_artist = steering_wheel_axes_ptr_->plot(Args(frame_x, frame_y), Kwargs("c"_a = "k", "lw"_a = line_width,"alpha"_a = 0.7)).unwrap().cast<py::list>()[0];
   }
   /*step03->draw artist*/
-  int pilot = static_cast<int>(data->adas_state);
+  int pilot = static_cast<int>(vehicle_data->adas_state);
   string color = pilot ? "k" : "orange"; //TODO:可以优化
   frame_artist.attr("set_color")(color);
   frame_artist.attr("set_data")(frame_x, frame_y);
@@ -197,7 +197,7 @@ void AnimationFunctions::drawBarPlot(const std::unordered_map<int, int>& frequen
   }
 }
 
-void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> data){
+void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> vehicle_data){
   /******数据计算******/
   static bool once_flag = true;
   /*step01->实时数据更新*/
@@ -205,14 +205,14 @@ void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> data){
   static float test_tick = 0;
   test_tick += 0.4;
   time_array.push_back(test_tick);
-  int data_num = data->Longi_order.size();
+  int data_num = vehicle_data->order.size();
   static map<string,vector<float>> line_data;
   static map<string,py::object> lines_artists;
   static vector<py::object> legend_artist(3);
   //标注数据
   static py::object text_artist;
-  for(const auto& key : data->Longi_order){
-    line_data[key].push_back(data->Longi.at(key));
+  for(const auto& key : vehicle_data->order){
+    line_data[key].push_back(vehicle_data->data.at(key));
   }
   
   if (time_array.size() > DATA_BUFFER) {
@@ -225,11 +225,11 @@ void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> data){
   if (once_flag) {
     once_flag = false;
     py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
-    text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, "local time: " + data->local_time),
+    text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, "local time: " + vehicle_data->local_time),
                                          Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")
                                         ).unwrap();
     int color_count = 0;
-    for (const std::string& key : data->Longi_order) {
+    for (const std::string& key : vehicle_data->order) {
       if(key == "ebs_cmd" || key == "brake_pressure_filtered" || key == "brake_gain"){
         lines_artists[key] = data_axes01_ptr_->plot(Args(time_array, line_data.at(key)), 
                                                     Kwargs("c"_a = COLORS[color_count % COLORS.size()], "lw"_a = 1.0, "label"_a = key)
@@ -262,7 +262,7 @@ void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> data){
     }
   }
   
-  text_artist.attr("set_text")("local time: " + data->local_time);
+  text_artist.attr("set_text")("local time: " + vehicle_data->local_time);
   data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
   data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
   data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
