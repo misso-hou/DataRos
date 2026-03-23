@@ -69,7 +69,7 @@ class AnimationFunctions {
 
   protected:
     bool frequencyCtrl(int T, int64_t& last_time_stamp);
-    void drawSteeringData(const string& time);
+    void drawSteeringData(const shared_ptr<func::msg_parser::ComputeData> vehicle_data);
     void drawSteeringWheel(const shared_ptr<func::msg_parser::ComputeData> vehicle_data, const float& line_width);
     void drawBarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02);
     void drawBrakeData(const shared_ptr<func::msg_parser::ComputeData> vehicle_data);

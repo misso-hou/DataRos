@@ -272,7 +272,7 @@ void Animation::SWTorqueMonitor(const shared_ptr<ComputeData> vehicel_data,
   if (frequencyCtrl(DURATION, last_sim_time_stamp)) return;
   /******绘图******/
   canvas_restore_region(data_figure_ptr_->unwrap(), data_background_);
-  drawSteeringData(vehicel_data->local_time);
+  drawSteeringData(vehicel_data);
   drawSteeringWheel(vehicel_data,20.0);
   drawBarPlot(freq01,freq02);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
@@ -297,7 +297,7 @@ void Animation::VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> v
   canvas_restore_region(data_figure_ptr_->unwrap(), vehicle_monitor_background_);
   drawHmiData();
   drawWatchdogState();
-  drawSteeringData(hmi_plt_data_.local_time);
+  drawSteeringData(vehicel_data);
   drawSteeringWheel(vehicel_data,10.0);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }

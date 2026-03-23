@@ -21,19 +21,20 @@ bool AnimationFunctions::frequencyCtrl(int T, int64_t& last_time_stamp) {
   return false;
 }
 
-void AnimationFunctions::drawSteeringData(const string& time){
+void AnimationFunctions::drawSteeringData(const shared_ptr<ComputeData> vehicle_data){
   static bool once_flag = true;
   /******数据计算******/
   /*step01->实时数据更新*/
-  int data_num = steer_wheel_plt_data_.size();
-  static mesh2D line_data(data_num);
-  static vector<py::object> lines_artist(data_num);
+  int data_num = vehicle_data->order.size();
+  static map<string,vector<float>> line_data;
+  static map<string,py::object> lines_artists;
   static vector<py::object> legend_artist(3);
   //标注数据
   static py::object text_artist;
-  string local_time = "local time: " + time;
-  for(uint i=0;i<data_num;i++){
-    line_data[i].push_back(steer_wheel_plt_data_[i]);
+  string local_time = "local time: " + vehicle_data->local_time;
+  for(const auto& key : vehicle_data->order){
+    if(vehicle_data->data.at(key) == std::numeric_limits<float>::lowest()) continue;
+    line_data[key].push_back(vehicle_data->data.at(key));
   }
   // 横轴数据更新
   static vector<int> time_array;
@@ -42,48 +43,63 @@ void AnimationFunctions::drawSteeringData(const string& time){
   // 纵轴数据更新
   if (time_array.size() > DATA_BUFFER) {
     time_array.erase(time_array.begin());
-    for(auto& line:line_data){
-      line.erase(line.begin());
+    for(auto& pair:line_data){
+      pair.second.erase(pair.second.begin());
     }
   }
   /*step02->static artist生成*/
-  static vector<string> lables = {"steer_wheel_angle", "steer_wheel_torque_filtered", "wheel_speed", "yaw_rate", "SWA_dot", "bias_T","l_mean","s_mean"};
   if (once_flag) {
     once_flag = false;
     py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
-    text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
-    for (int i = 0; i < line_data.size(); i++) {
-      if(i==0 || i==1 || i==4 || i==5){
-        lines_artist[i] = data_axes01_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
-        legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
+    text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, "local time: " + vehicle_data->local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
+    int color_count = 0;
+    static vector<string> lables = {"steer_wheel_angle", "steer_wheel_torque_filtered", "wheel_speed", "yaw_rate", "SWA_dot", "bias_T","l_mean","s_mean"};
+    for (const std::string& key : vehicle_data->order) {
+      if(key=="steer_wheel_angle" || 
+         key=="steer_wheel_torque_filtered" || 
+         key=="steer_wheel_angle_dot" || 
+         key=="steer_wheel_torque_mode"){
+        lines_artists[key] = data_axes01_ptr_->plot(Args(time_array, line_data.at(key)), Kwargs("c"_a = COLORS[color_count], "lw"_a = 1.0,"label"_a = key)).unwrap().cast<py::list>()[0];
+        
       }
-      else if(i==2){
-        lines_artist[i] = data_axes02_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
-        legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
-      }else if(i==3 || i==6 || i==7){
-        lines_artist[i] = data_axes03_ptr_->plot(Args(time_array, line_data[i]), Kwargs("c"_a = COLORS[i], "lw"_a = 1.0,"label"_a = lables[i])).unwrap().cast<py::list>()[0];
-        legend_artist[2] = data_axes03_ptr_->legend(Args(),Kwargs("loc"_a = "lower right")).unwrap();
+      else if(key=="wheel_speed"){
+        lines_artists[key] = data_axes02_ptr_->plot(Args(time_array, line_data.at(key)), Kwargs("c"_a = COLORS[color_count], "lw"_a = 1.0,"label"_a = key)).unwrap().cast<py::list>()[0];
+      }else if(key=="yaw_rate" || 
+               key=="long_window_mean" || 
+               key=="short_window_mean"){
+        lines_artists[key] = data_axes03_ptr_->plot(Args(time_array, line_data.at(key)), Kwargs("c"_a = COLORS[color_count], "lw"_a = 1.0,"label"_a = key)).unwrap().cast<py::list>()[0];
+      }else{
+        if(color_count > 0) color_count--;
       }
+      color_count++;
     }
+    legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+    legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+    legend_artist[2] = data_axes03_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
   }
   /*step03->artist实时数据更新并绘制*/
-  for (int i = 0; i < lines_artist.size(); i++) {
-    lines_artist[i].attr("set_data")(time_array, line_data[i]);
-    if(i==0 || i==1 || i==4 || i==5){
-      data_axes01_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
-    }
-    else if(i==2){
-      data_axes02_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
-    }else if(i==3 || i==6 || i==7){
-      data_axes03_ptr_->unwrap().attr("draw_artist")(lines_artist[i]);
+  for (auto& line_artist : lines_artists) {
+    auto key = line_artist.first;
+    line_artist.second.attr("set_data")(time_array, line_data.at(key));
+    if(key=="steer_wheel_angle" || 
+       key=="steer_wheel_torque_filtered" || 
+       key=="steer_wheel_angle_dot" || 
+       key=="steer_wheel_torque_mode"){
+      data_axes01_ptr_->unwrap().attr("draw_artist")(line_artist.second);
+    }else if(key=="wheel_speed"){
+      data_axes02_ptr_->unwrap().attr("draw_artist")(line_artist.second);
+    }else if(key=="yaw_rate" || 
+              key=="long_window_mean" || 
+              key=="short_window_mean"){
+      data_axes03_ptr_->unwrap().attr("draw_artist")(line_artist.second);
     }
   }
+
+  text_artist.attr("set_text")("local time: " + vehicle_data->local_time);
+  data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
   data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
   data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
   data_axes03_ptr_->unwrap().attr("draw_artist")(legend_artist[2]);
-  // text数据
-  text_artist.attr("set_text")(local_time);
-  data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
   /******axis计算******/
   auto axes_xlim = data_axes01_ptr_->get_xlim();
   if (time_array.back() > get<1>(axes_xlim) - 10) {
@@ -120,7 +136,7 @@ void AnimationFunctions::drawSteeringWheel(const shared_ptr<ComputeData> vehicle
       frame_artist = steering_wheel_axes_ptr_->plot(Args(frame_x, frame_y), Kwargs("c"_a = "k", "lw"_a = line_width,"alpha"_a = 0.7)).unwrap().cast<py::list>()[0];
   }
   /*step03->draw artist*/
-  int pilot = static_cast<int>(vehicle_data->adas_state);
+  int pilot = static_cast<int>(vehicle_data->data.at("adas_state"));
   string color = pilot ? "k" : "orange"; //TODO:可以优化
   frame_artist.attr("set_color")(color);
   frame_artist.attr("set_data")(frame_x, frame_y);
@@ -212,6 +228,7 @@ void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> vehicle_dat
   //标注数据
   static py::object text_artist;
   for(const auto& key : vehicle_data->order){
+    if(vehicle_data->data.at(key) == std::numeric_limits<float>::lowest()) continue;
     line_data[key].push_back(vehicle_data->data.at(key));
   }
   
@@ -242,6 +259,8 @@ void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> vehicle_dat
         lines_artists[key] = data_axes03_ptr_->plot(Args(time_array, line_data.at(key)), 
                                                     Kwargs("c"_a = COLORS[color_count % COLORS.size()], "lw"_a = 1.0, "label"_a = key)
                                                     ).unwrap().cast<py::list>()[0];
+      }else{
+        if(color_count > 0) color_count--;
       }
       color_count++;
     }

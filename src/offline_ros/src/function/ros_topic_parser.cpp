@@ -85,7 +85,13 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
         rec_data_->data.at("yaw_rate") = dbw_report.vehicle_dynamic().angular_velocity().z();
         rec_data_->data.at("brake_pressure") = dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel();
         rec_data_->data.at("speed") = dbw_report.steering_report().speed();
-        rec_data_->data.at("adas_state") = dbw_report.superpilot_enabled();
+        if(dbw_report.superpilot_enabled()){
+            rec_data_->data.at("adas_state") = 2;
+        }else if(dbw_report.acc_enabled()){
+            rec_data_->data.at("adas_state") = 1;
+        }else{
+            rec_data_->data.at("adas_state") = 0;
+        }
         // for display and calculation
         swt_filtered_ = Math::LowPassFilter(rec_data_->data.at("steer_wheel_torque_filtered"),swt_filtered_,0.05);
         brake_pressure_filtered_ = Math::LowPassFilter(rec_data_->data.at("brake_pressure"),brake_pressure_filtered_,0.05);
@@ -208,6 +214,7 @@ std::shared_ptr<ComputeData> MsgParser::getVehicleData() {
     vehicle_data_->data.at("speed") = rec_data_->data.at("speed");
     vehicle_data_->data.at("pitch") = rec_data_->data.at("pitch");
     vehicle_data_->data.at("brake_pressure_filtered") = brake_pressure_filtered_;
+    vehicle_data_->data.at("adas_state") = rec_data_->data.at("adas_state");
     return vehicle_data_;
 }
 
