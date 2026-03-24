@@ -194,20 +194,6 @@ struct HmiData {
     Watchdog watchdog_state;
 };
 
-enum class DataIndex{
-    steer_wheel_angle = 0,
-    steer_wheel_torque_filtered,
-    wheel_speed,
-    yaw_rate,
-    ebs_cmd,
-    acc_mes,
-    acc_ref,
-    speed,
-    pitch,
-    brake_pressure,
-    adas_state
-};
-
 struct RecordData {
     std::map<std::string, float> data;
 
@@ -237,12 +223,6 @@ struct RecordData {
     }
 };
 
-template <typename E>
-constexpr auto to_int(E e) noexcept {
-    static_assert(std::is_enum<E>::value, "to_int only works with enum types");
-    return static_cast<typename std::underlying_type<E>::type>(e);
-}
-
 class MsgParser {
     public:
         MsgParser(int argc, char *argv[]);
@@ -250,8 +230,6 @@ class MsgParser {
         ~MsgParser();
 
     public:
-        VehicleSteerData getVehicleSteerData();
-        VehicleBrakeData getVehicleBrakeData();
         std::shared_ptr<ComputeData> getVehicleData();
         HmiData getHmiData();
 

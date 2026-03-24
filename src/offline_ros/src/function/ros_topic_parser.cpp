@@ -218,29 +218,6 @@ std::shared_ptr<ComputeData> MsgParser::getVehicleData() {
     return vehicle_data_;
 }
 
-VehicleSteerData MsgParser::getVehicleSteerData() {
-    std::lock_guard<std::mutex> lock(data_mutex_);
-    return {local_time_,
-            record_data_[to_int(DataIndex::steer_wheel_angle)],
-            swt_filtered_,
-            record_data_[to_int(DataIndex::wheel_speed)],
-            record_data_[to_int(DataIndex::yaw_rate)],
-            swa_dot_,
-            static_cast<bool>(record_data_[to_int(DataIndex::adas_state)])};
-}
-
-VehicleBrakeData MsgParser::getVehicleBrakeData() {
-    std::lock_guard<std::mutex> lock(data_mutex_);
-    return {local_time_,
-            record_data_[to_int(DataIndex::ebs_cmd)],
-            record_data_[to_int(DataIndex::acc_mes)],
-            record_data_[to_int(DataIndex::acc_ref)],
-            record_data_[to_int(DataIndex::speed)],
-            record_data_[to_int(DataIndex::pitch)],
-            brake_pressure_filtered_,
-            record_data_[to_int(DataIndex::wheel_speed)]};
-}
-
 HmiData MsgParser::getHmiData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
