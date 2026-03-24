@@ -61,21 +61,20 @@ include_directories(
 # 添加要构建的源代码文件
 file(GLOB SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
-# add_executable(${PROJECT_NAME}_node ${SRC_FILES})
 # --------------------转向数据播放器节点--------------------
-# add_executable(steer_play_node
-#   src/RosNode/steer_play_node.cpp      
-#   src/function/ros_topic_parser.cpp    
-#   src/function/animation.cpp
-#   src/function/animation_functions.cpp
-#   src/function/display_control.cpp
-# )
+add_executable(steer_play_node
+  src/RosNode/steer_play_node.cpp      
+  src/function/ros_topic_parser.cpp    
+  src/function/animation.cpp
+  src/function/animation_functions.cpp
+  src/function/display_control.cpp
+)
 
-# # ROS 与外部库的链接
-# target_link_libraries(steer_play_node
-#   ${COMMON_LIBS}
-#   ${VISUALIZATION_LIBS}
-# )
+# ROS 与外部库的链接
+target_link_libraries(steer_play_node
+  ${COMMON_LIBS}
+  ${VISUALIZATION_LIBS}
+)
 
 # --------------------刹车数据播放器节点--------------------
 add_executable(brake_play_node
@@ -123,18 +122,18 @@ target_link_libraries(brake_realtime_node
 )
 
 # --------------------HMI实时运算节点--------------------
-# add_executable(hmi_realtime_node
-#   src/RosNode/hmi_realtime_node.cpp      
-#   src/function/ros_topic_parser.cpp    
-#   src/function/animation.cpp
-#   src/function/animation_functions.cpp
-# )
+add_executable(hmi_realtime_node
+  src/RosNode/hmi_realtime_node.cpp      
+  src/function/ros_topic_parser.cpp    
+  src/function/animation.cpp
+  src/function/animation_functions.cpp
+)
 
-# # ROS 与外部库的链接
-# target_link_libraries(hmi_realtime_node
-#   ${COMMON_LIBS}
-#   ${VISUALIZATION_LIBS}
-# )
+# ROS 与外部库的链接
+target_link_libraries(hmi_realtime_node
+  ${COMMON_LIBS}
+  ${VISUALIZATION_LIBS}
+)
 
 # --------------------ROS监听器节点-------------------
 add_executable(ros_listener_node
@@ -150,12 +149,11 @@ target_link_libraries(ros_listener_node
 ###########################INSTALL###########################
 # 安装执行文件
 install(TARGETS 
-  # steer_play_node 
+  steer_play_node 
   brake_play_node 
-  # ros_listener_node 
   steer_realtime_node 
   brake_realtime_node
-  # hmi_realtime_node
+  hmi_realtime_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

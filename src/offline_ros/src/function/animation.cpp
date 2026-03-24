@@ -297,7 +297,7 @@ void Animation::VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> v
   canvas_restore_region(data_figure_ptr_->unwrap(), vehicle_monitor_background_);
   drawHmiData();
   drawWatchdogState();
-  drawSteeringData(vehicel_data);
+  // drawSteeringData(vehicel_data);
   drawSteeringWheel(vehicel_data,10.0);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }

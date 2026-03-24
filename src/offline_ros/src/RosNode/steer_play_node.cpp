@@ -28,52 +28,42 @@ namespace Math = toolbox::math;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 std::unique_ptr<DisplayControl> disp_ctrl_ptr = std::make_unique<DisplayControl>();
 
-/*
- * ---------数据回放使用方法----------：
- * 执行命令：./csvPlt+"播放速度设置“+”播放位置设置“+”csv文件夹序号“+”csv文件夹内部文件序号“
- * 播放速度默认为1
- * 播放位置默认从头开始
- * 文件夹默认为csv文件不带后缀序号
- * csv文件内部默认只有一组数据
- */
 int main(int argc, char *argv[]) {
-  AlgWW::WeightedWindows windows(150,20);
+  AlgWW::WeightedWindows windows(100,20);
   pybind11::scoped_interpreter guard{};
   disp_ctrl_ptr->SetParam(argc, argv);
-  auto data_mat2D = disp_ctrl_ptr->ExtractDataInRow(argc, argv);
+  auto record_data = disp_ctrl_ptr->ExtractDataInColumn(argc, argv);
   Animator->InitWeightedWindowsPlt();
-  for (int i = disp_ctrl_ptr->start_index_; i < data_mat2D.size();)  //数据行遍历
+  for (int i = disp_ctrl_ptr->start_index_; i < disp_ctrl_ptr->data_length_;)  //数据行遍历
   {
     //键盘控制
     if (!disp_ctrl_ptr->KeyboardCtrl(i)) break;
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
-    string local_time = disp_ctrl_ptr->getLogTimestamp(i);
-    auto data_row = data_mat2D[i];
-    //数据处理
-    static float swt_filtered = data_row.at(to_int(DataIndex::steer_wheel_torque_filtered));
-    swt_filtered = Math::LowPassFilter(data_row.at(to_int(DataIndex::steer_wheel_torque_filtered)),swt_filtered,0.05);
+    auto vehicle_data = std::make_shared<func::msg_parser::ComputeData>();
+    //数据获取
+    static float swt_filtered = record_data.at("steer_wheel_torque_filtered")[i];
+    swt_filtered = Math::LowPassFilter(record_data.at("steer_wheel_torque_filtered")[i],swt_filtered,0.05);
     float swa_dot = i <= 1 ? 0 : 
-                    (data_row.at(to_int(DataIndex::steer_wheel_angle)) - data_mat2D[i-1][to_int(DataIndex::steer_wheel_angle)]) / TS;
-    bool pilot_state = static_cast<bool>(data_row.at(to_int(DataIndex::adas_state)));
-    // 获取前5个数据
-    vector<float> plt_data(8);
-    plt_data.at(0) = data_row.at(to_int(DataIndex::steer_wheel_angle));
-    plt_data.at(1) = swt_filtered;
-    plt_data.at(2) = data_row.at(to_int(DataIndex::wheel_speed));
-    plt_data.at(3) = data_row.at(to_int(DataIndex::yaw_rate));
-    plt_data.at(4) = swa_dot;
-    auto mode = windows.getWeightedMode(swt_filtered,
-                                        data_row.at(to_int(DataIndex::wheel_speed)),
-                                        data_row.at(to_int(DataIndex::steer_wheel_angle)),
-                                        pilot_state);
-    plt_data.at(5) = mode;
-    plt_data.at(6) = windows.getLongMean();
-    plt_data.at(7) = windows.getShortMean();
-    Animator->SetSteerWheelData(plt_data);
-    /*------动画显示-----*/
-    auto freq01 = windows.getLongFreqency();
-    auto freq02 = windows.getShortFreqency();
-    Animator->SWTorqueMonitor(local_time, data_row.at(to_int(DataIndex::steer_wheel_angle)),pilot_state,freq01,freq02);
+                    (record_data.at("steer_wheel_angle")[i] - record_data.at("steer_wheel_angle")[i-1]) / TS;
+    vehicle_data->data.at("adas_state") = record_data.at("adas_state")[i];
+    vehicle_data->data.at("steer_wheel_angle") = record_data.at("steer_wheel_angle")[i];
+    vehicle_data->data.at("steer_wheel_torque_filtered") = swt_filtered;
+    vehicle_data->data.at("wheel_speed") = record_data.at("wheel_speed")[i];
+    vehicle_data->data.at("yaw_rate") = record_data.at("yaw_rate")[i];
+    vehicle_data->data.at("steer_wheel_angle_dot") = swa_dot;
+    bool pilot_enabled = (vehicle_data->data.at("adas_state") >= 2);
+    auto mode = windows.getWeightedMode(vehicle_data->data.at("steer_wheel_torque_filtered"),
+                                        vehicle_data->data.at("wheel_speed"),
+                                        vehicle_data->data.at("yaw_rate"),
+                                        pilot_enabled);
+    vehicle_data->data.at("steer_wheel_torque_mode") = mode;
+    vehicle_data->data.at("long_window_mean") = windows.getLongMean();
+    vehicle_data->data.at("short_window_mean") = windows.getShortMean();
+     /*------动画显示-----*/
+     auto freq01 = windows.getLongFreqency();
+     auto freq02 = windows.getShortFreqency();
+     Animator->SWTorqueMonitor(vehicle_data,freq01,freq02);
+    //周期控制
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();
     int64_t remaining_T = disp_ctrl_ptr->cycle_time_ - (end_time - start_time);
     if (remaining_T > 0) {

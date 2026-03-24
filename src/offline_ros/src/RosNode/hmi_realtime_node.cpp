@@ -35,24 +35,12 @@ int main(int argc, char *argv[]) {
   ros::Rate rt(20);
   while (ros::ok()) {
     ros::spinOnce();
-
-    auto realtime_data = msg_parser.getVehicleSteerData();
-    vector<float> plt_data(8);
-    plt_data.at(0) = realtime_data.steer_wheel_angle;
-    plt_data.at(1) = realtime_data.steer_wheel_torque_filtered;
-    plt_data.at(2) = realtime_data.wheel_speed;
-    plt_data.at(3) = realtime_data.yaw_rate;
-    plt_data.at(4) = realtime_data.steer_wheel_angle_dot;
-    bool pilot_state = static_cast<bool>(realtime_data.pilot_state);
-    plt_data.at(5) = 0.0f;
-    plt_data.at(6) = 0.0f;
-    plt_data.at(7) = 0.0f;
-    Animator->SetSteerWheelData(plt_data);
+    auto vehicle_data = msg_parser.getVehicleData();
     // hmi data    
     auto hmi_data = msg_parser.getHmiData();
     Animator->SetHmiData(hmi_data);
     /*------动画显示-----*/
-    Animator->VehicleMonitor(plt_data.at(0),pilot_state);
+    Animator->VehicleMonitor(vehicle_data);
     rt.sleep();
   }
   pybind11::finalize_interpreter();
