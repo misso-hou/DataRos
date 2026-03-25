@@ -144,7 +144,7 @@ void Animation::InitVehicleMonitor() {
   auto gs = data_figure_ptr_->add_gridspec(4, 8,
                                             Kwargs("left"_a = 0.01, "right"_a = 0.99,
                                                   "bottom"_a = 0.04, "top"_a = 0.97,
-                                                  "wspace"_a = 0.25, "hspace"_a = 0.15));
+                                                  "wspace"_a = 0.25, "hspace"_a = 0.2));
 
   //----------------------------button patches----------------------------    
   //axes01->hmi 按键&开关&状态 //NOTE:占用figure的比例与坐标轴的范围对应
@@ -183,8 +183,7 @@ void Animation::InitVehicleMonitor() {
   }
   //绘制switches
   vector<string> switches_name = {"switches:"};
-  for (const auto& pair : button_switch.switches) {
-    const auto& key = pair.first;
+  for (const auto& key : button_switch.switch_order) {
     switches_name.push_back(key);
   }
   for(int i=0;i<switches_name.size();i++){
@@ -215,10 +214,17 @@ void Animation::InitVehicleMonitor() {
   hmi_patches_axes_ptr_->set_ylim(Args(0, 1));
   //----------------------------watchdog state patches----------------------------    
   //axes02->hmi 按键&开关&状态 //NOTE:占用figure的比例与坐标轴的范围对应
-  auto watchdog_axes_obj = figure.add_subplot(Args(gs(py::slice(1, 4, 1), py::slice(0, 2, 1)).unwrap()),Kwargs("facecolor"_a = "gray")); 
+  auto watchdog_axes_obj = figure.add_subplot(Args(gs(py::slice(1, 2, 1), py::slice(0, 2, 1)).unwrap()),Kwargs("facecolor"_a = "gray")); 
   watchdog_axes_ptr_ = make_shared<mpl::axes::Axes>(watchdog_axes_obj);    
   watchdog_axes_ptr_->set_xticklabels(Args(py::list()));
   watchdog_axes_ptr_->unwrap().attr("set_yticklabels")(py::list());
+  watchdog_axes_ptr_->set_title(Args("Watchdog"),Kwargs("fontsize"_a = 15,"color"_a = "red","fontweight"_a="bold"));
+  //status report
+  auto status_report_axes_obj = figure.add_subplot(Args(gs(py::slice(2, 4, 1), py::slice(0, 2, 1)).unwrap()),Kwargs("facecolor"_a = "gray")); 
+  status_report_axes_ptr_ = make_shared<mpl::axes::Axes>(status_report_axes_obj);    
+  status_report_axes_ptr_->set_xticklabels(Args(py::list()));
+  status_report_axes_ptr_->unwrap().attr("set_yticklabels")(py::list());
+  status_report_axes_ptr_->set_title(Args("status_report"),Kwargs("fontsize"_a = 15,"color"_a = "red","fontweight"_a="bold"));
   //----------------------------data curve----------------------------                                            
   //axes03
   auto axes_obj_01 = figure.add_subplot(Args(gs(1, py::slice(2, 8, 1)).unwrap()),Kwargs("facecolor"_a = "gray"));           
@@ -295,9 +301,10 @@ void Animation::VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> v
   if (frequencyCtrl(DURATION, last_sim_time_stamp)) return;
   /******绘图******/
   canvas_restore_region(data_figure_ptr_->unwrap(), vehicle_monitor_background_);
-  drawHmiData();
+  drawHmiButtonAndSwitch();
   drawWatchdogState();
-  // drawSteeringData(vehicel_data);
+  drawStatusReport();
+  drawHmiData();
   drawSteeringWheel(vehicel_data,10.0);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }

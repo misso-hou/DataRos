@@ -40,6 +40,7 @@ MsgParser::MsgParser(int argc, char *argv[]) {
     dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
     ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
     watchdog_sub_ = nh_.subscribe("/watchdog/current_state",1000, &MsgParser::watchdog_callback, this);
+    status_report_sub_ = nh_.subscribe("/vehicle/status_report",1000, &MsgParser::statusReport_callback, this);
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
 }
 
@@ -176,6 +177,35 @@ void MsgParser::watchdog_callback(const std_msgs::String::ConstPtr& msg)
     }
 }
 
+void MsgParser::statusReport_callback(const std_msgs::String::ConstPtr& msg)
+{
+    m_msg::StatusReport status_report;
+    if (!status_report.ParseFromString(msg->data))
+    {
+        ROS_WARN("Failed to parse status_report message");
+        return;
+    }
+    // 提取数据
+    {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        for (auto vehicle_state : status_report.vehicle_states()) {
+            auto enum_type = vehicle_state.state_type();
+            if (enum_type == m_msg::VehicleState_StateType_VEHICLE_WIPER_STATUS) {
+                status_report_.status.at("VEHICLE_WIPER_STATUS") = vehicle_state.value();
+            }
+            if (enum_type == m_msg::VehicleState_StateType_BSD_RIGHT_LED_NA) {
+                status_report_.status.at("BSD_RIGHT_LED_NA") = vehicle_state.value();
+            }
+            if (enum_type == m_msg::VehicleState_StateType_BSD_LEFT_LED_NA) {
+                status_report_.status.at("BSD_LEFT_LED_NA") = vehicle_state.value();
+            }
+            if (enum_type == m_msg::VehicleState_StateType_BSD_SWITCH_ERR) {
+                status_report_.status.at("BSD_SWITCH_ERR") = vehicle_state.value();
+            }
+        }
+    }
+}
+
 void MsgParser::writeToCSV(const long long timestamp, const std::vector<float>& data) {
     if (!csv_file_.is_open())
     {
@@ -222,7 +252,8 @@ HmiData MsgParser::getHmiData() {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return {local_time_,
             button_switch_,
-            watchdog_state_};
+            watchdog_state_,
+            status_report_};
 }
 
 

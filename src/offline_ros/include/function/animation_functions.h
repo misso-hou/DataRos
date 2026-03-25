@@ -73,8 +73,10 @@ class AnimationFunctions {
     void drawSteeringWheel(const shared_ptr<func::msg_parser::ComputeData> vehicle_data, const float& line_width);
     void drawBarPlot(const std::unordered_map<int, int>& frequency01,const std::unordered_map<int, int>& frequency02);
     void drawBrakeData(const shared_ptr<func::msg_parser::ComputeData> vehicle_data);
-    void drawHmiData();
+    void drawHmiButtonAndSwitch();
     void drawWatchdogState();
+    void drawStatusReport();
+    void drawHmiData();
     void initSteerWheel(mpl::axes::Axes& axes);
 
   protected:
@@ -88,6 +90,7 @@ class AnimationFunctions {
     shared_ptr<mpl::axes::Axes> steering_wheel_axes_ptr_;
     shared_ptr<mpl::axes::Axes> hmi_patches_axes_ptr_;
     shared_ptr<mpl::axes::Axes> watchdog_axes_ptr_;
+    shared_ptr<mpl::axes::Axes> status_report_axes_ptr_;
     // figure
     shared_ptr<mpl::figure::Figure> data_figure_ptr_;
     // background

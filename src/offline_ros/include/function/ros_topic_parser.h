@@ -11,12 +11,14 @@
 #include "plusai_common_proto/control/dbw_reports.pb.h"
 #include "plusai_common_proto/control/control_command.pb.h"
 #include "plusai_common_proto/monitor/app_watchdog_state.pb.h"
+#include "plusai_common_proto/monitor/status_report_msg.pb.h"
 
 namespace func {
 namespace msg_parser {
 
 namespace control = drive::common::control;
 namespace monitor = drive::common::monitor;
+namespace m_msg = drive::common::monitor_msg;
 
 extern float TS;
 
@@ -87,30 +89,10 @@ struct ComputeData {
     }
 };
 
-struct VehicleSteerData {
-    std::string local_time;
-    float steer_wheel_angle;
-    float steer_wheel_torque_filtered;
-    float wheel_speed;
-    float yaw_rate;
-    float steer_wheel_angle_dot;
-    bool pilot_state;
-};
-
-struct VehicleBrakeData {
-    std::string local_time;
-    float ebs_cmd;
-    float acc_mes;
-    float acc_ref;
-    float speed;
-    float pitch;
-    float brake_pressure_filtered;
-    float wheel_speed;
-};
-
 struct ButtonAndSwitch {
     std::map<std::string, bool> buttons;
     std::map<std::string, bool> switches;
+    std::vector<std::string> switch_order = {"acc_switch", "pilot_switch", "noa_switch"};
     ButtonAndSwitch() {
         buttons = {
             {"acc_engage", false},
@@ -188,10 +170,23 @@ struct Watchdog {
     }
 };
 
+struct StatusReport {
+    std::map<std::string, int> status;
+    StatusReport() {
+        status = {
+            {"VEHICLE_WIPER_STATUS", -1},
+            {"BSD_RIGHT_LED_NA", -1},
+            {"BSD_LEFT_LED_NA", -1},
+            {"BSD_SWITCH_ERR", -1}
+        };
+    }
+};
+
 struct HmiData {
     std::string local_time;
     ButtonAndSwitch button_switch;
     Watchdog watchdog_state;
+    StatusReport status_report;
 };
 
 struct RecordData {
@@ -237,6 +232,7 @@ class MsgParser {
         void dbw_callback(const std_msgs::String::ConstPtr& msg);
         void ctrl_callback(const std_msgs::String::ConstPtr& msg);
         void watchdog_callback(const std_msgs::String::ConstPtr& msg);
+        void statusReport_callback(const std_msgs::String::ConstPtr& msg);
         void writeToCSV(const long long timestamp, const std::vector<float>& data);
         void updateHmiData(const control::DbwReports& dbw_report);
     
@@ -245,6 +241,7 @@ class MsgParser {
         ros::Subscriber dbw_sub_;
         ros::Subscriber ctrl_sub_;
         ros::Subscriber watchdog_sub_;
+        ros::Subscriber status_report_sub_;
         std::ofstream csv_file_;
         std::string csv_file_path_;
         std::mutex data_mutex_;
@@ -257,6 +254,7 @@ class MsgParser {
         bool first_flag_ = true;
         ButtonAndSwitch button_switch_;
         Watchdog watchdog_state_;
+        StatusReport status_report_;
         
     private:  // 后处理数据
         float swa_dot_ = 0.0;

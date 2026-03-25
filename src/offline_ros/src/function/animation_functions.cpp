@@ -21,6 +21,56 @@ bool AnimationFunctions::frequencyCtrl(int T, int64_t& last_time_stamp) {
   return false;
 }
 
+void AnimationFunctions::drawHmiData(){
+  static bool once_flag = true;
+  /******数据计算******/
+  /*step01->实时数据更新*/
+  int data_num = hmi_plt_data_.status_report.status.size();
+  static map<string,vector<float>> line_data;
+  static map<string,py::object> lines_artists;
+  static vector<py::object> legend_artist(1);
+  //标注数据
+  static py::object text_artist;
+  string local_time = "local time: " + hmi_plt_data_.local_time;
+  line_data["VEHICLE_WIPER_STATUS"].push_back(hmi_plt_data_.status_report.status.at("VEHICLE_WIPER_STATUS"));
+  // 横轴数据更新
+  static vector<int> time_array;
+  static int tick = 0;
+  time_array.push_back(tick++);
+  // 纵轴数据更新
+  if (time_array.size() > DATA_BUFFER) {
+    time_array.erase(time_array.begin());
+    for(auto& pair:line_data){
+      pair.second.erase(pair.second.begin());
+    }
+  }
+  /*step02->static artist生成*/
+  if (once_flag) {
+    once_flag = false;
+    py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
+    text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, "local time: " + hmi_plt_data_.local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
+    int color_count = 0;
+    lines_artists["VEHICLE_WIPER_STATUS"] = data_axes01_ptr_->plot(Args(time_array, line_data.at("VEHICLE_WIPER_STATUS")), Kwargs("c"_a = COLORS[color_count], "lw"_a = 1.0,"label"_a = "VEHICLE_WIPER_STATUS")).unwrap().cast<py::list>()[0];
+    legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+  }
+  /*step03->artist实时数据更新并绘制*/
+  for (auto& line_artist : lines_artists) {
+    auto key = line_artist.first;
+    line_artist.second.attr("set_data")(time_array, line_data.at(key));
+    data_axes01_ptr_->unwrap().attr("draw_artist")(line_artist.second);
+  }
+
+  text_artist.attr("set_text")("local time: " + hmi_plt_data_.local_time);
+  data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
+  data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
+  /******axis计算******/
+  auto axes_xlim = data_axes01_ptr_->get_xlim();
+  if (time_array.back() > get<1>(axes_xlim) - 10) {
+    float x_min = get<1>(axes_xlim) - 20.f;
+    float x_max = x_min + CMD_X_RANGE;
+    data_axes01_ptr_->set_xlim(Args(x_min, x_max));
+  }
+}
 void AnimationFunctions::drawSteeringData(const shared_ptr<ComputeData> vehicle_data){
   static bool once_flag = true;
   /******数据计算******/
@@ -53,7 +103,6 @@ void AnimationFunctions::drawSteeringData(const shared_ptr<ComputeData> vehicle_
     py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
     text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, "local time: " + vehicle_data->local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
     int color_count = 0;
-    static vector<string> lables = {"steer_wheel_angle", "steer_wheel_torque_filtered", "wheel_speed", "yaw_rate", "SWA_dot", "bias_T","l_mean","s_mean"};
     for (const std::string& key : vehicle_data->order) {
       if(key=="steer_wheel_angle" || 
          key=="steer_wheel_torque_filtered" || 
@@ -297,15 +346,15 @@ void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> vehicle_dat
   }  
 }
 
-void AnimationFunctions::drawHmiData(){
+void AnimationFunctions::drawHmiButtonAndSwitch(){
   py::list color_lst;
   auto button_switch = hmi_plt_data_.button_switch;
   for (const auto& pair : button_switch.buttons) {
     string color = pair.second ? "orange" : "gray";
     color_lst.append(color);
   }
-  for (const auto& pair : button_switch.switches) {
-    string color = pair.second ? "orange" : "gray";
+  for (const auto& key : button_switch.switch_order) {
+    string color = button_switch.switches.at(key) ? "orange" : "gray";
     color_lst.append(color);
   }
   hmi_rect_patches_.attr("set_facecolors")(color_lst);
@@ -316,7 +365,7 @@ void AnimationFunctions::drawWatchdogState(){
   static bool once_flag = true;
   static vector<py::object> text_artist;
   auto watchdog = hmi_plt_data_.watchdog_state;
-  vector<string> state_name = {"watchdog:"};
+  vector<string> state_name;
   for (const auto& key : watchdog.state_order) {
     int value = watchdog.state[key];
     string state = watchdog.FSMStateToString(value);
@@ -328,17 +377,13 @@ void AnimationFunctions::drawWatchdogState(){
     try {
       for(int i=0;i<state_name.size();i++){
         // 计算矩形中心点坐标（使用正确的左下角坐标）
-        float text_x = i>0 ? 0.02 : 0.5;
-        double center_y = 0.95 - i *0.06;
-        int fontsize = i>0 ? 12 : 16;
-        string color = i>0 ? "white" : "red";
-        string ha = i>0 ? "left" : "center";
+        double center_y = 0.85 - i *0.12;
         // 在矩形中心添加文字
-        auto artist = watchdog_axes_ptr_->text(Args(text_x, center_y, state_name[i]),
-                                                Kwargs("ha"_a = ha,
+        auto artist = watchdog_axes_ptr_->text(Args(0.03, center_y, state_name[i]),
+                                                Kwargs("ha"_a = "left",
                                                         "va"_a = "center",
-                                                        "color"_a = color,
-                                                        "fontsize"_a = fontsize));
+                                                        "color"_a = "white",
+                                                        "fontsize"_a = 12));
         text_artist.push_back(artist.unwrap());
       }    
     } catch (const exception& e) {
@@ -350,6 +395,43 @@ void AnimationFunctions::drawWatchdogState(){
   for (int i = 0; i < state_name.size(); i++) {
     text_artist[i].attr("set_text")(state_name[i]);
     watchdog_axes_ptr_->unwrap().attr("draw_artist")(text_artist[i]);
+  }
+}
+
+void AnimationFunctions::drawStatusReport(){
+  static bool once_flag = true;
+  static vector<py::object> text_artist;
+  auto status_report = hmi_plt_data_.status_report;
+  vector<string> status_name;
+  for (const auto& pair : status_report.status) {
+    auto key = pair.first;
+    int value = pair.second;
+    string each_name = key + ": " + to_string(value);
+    status_name.push_back(each_name);
+  }
+  if (once_flag) {
+    once_flag = false;
+    try {
+      for(int i=0;i<status_name.size();i++){
+        // 计算矩形中心点坐标（使用正确的左下角坐标）
+        double center_y = 0.95 - i *0.07;
+        // 在矩形中心添加文字
+        auto artist = status_report_axes_ptr_->text(Args(0.03, center_y, status_name[i]),
+                                                    Kwargs("ha"_a = "left",
+                                                            "va"_a = "center",
+                                                            "color"_a = "white",
+                                                            "fontsize"_a = 12));
+        text_artist.push_back(artist.unwrap());
+      }    
+    } catch (const exception& e) {
+      cout << "[Brake] 首次执行异常: " << e.what() << endl;
+      throw; // 重新抛出，让bug暴露
+    }
+  }
+  //绘制watchdog状态
+  for (int i = 0; i < status_name.size(); i++) {
+    text_artist[i].attr("set_text")(status_name[i]);
+    status_report_axes_ptr_->unwrap().attr("draw_artist")(text_artist[i]);
   }
 }
 
