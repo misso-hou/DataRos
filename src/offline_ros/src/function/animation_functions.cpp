@@ -21,6 +21,29 @@ bool AnimationFunctions::frequencyCtrl(int T, int64_t& last_time_stamp) {
   return false;
 }
 
+void AnimationFunctions::rangeSet(bool is_all,const int max_x) {
+  auto axes_xlim = data_axes01_ptr_->get_xlim();
+  if(is_all){
+    auto range = get<1>(axes_xlim) - get<0>(axes_xlim);
+    if (max_x > (range*0.6)) {
+      float x_min = get<0>(axes_xlim); 
+      float x_max = get<1>(axes_xlim) + 2;
+      data_axes01_ptr_->set_xlim(Args(x_min, x_max));
+      data_axes02_ptr_->set_xlim(Args(x_min, x_max));
+      data_axes03_ptr_->set_xlim(Args(x_min, x_max));
+    }
+  }else{
+    int left_space = 10;
+    if (max_x > get<1>(axes_xlim) - left_space) {
+      float x_min = get<1>(axes_xlim) - 2*left_space;
+      float x_max = x_min + CMD_X_RANGE;
+      data_axes01_ptr_->set_xlim(Args(x_min, x_max));
+      data_axes02_ptr_->set_xlim(Args(x_min, x_max));
+      data_axes03_ptr_->set_xlim(Args(x_min, x_max));
+    }
+  }
+}
+
 void AnimationFunctions::drawHmiData(){
   static bool once_flag = true;
   /******数据计算******/
@@ -64,12 +87,7 @@ void AnimationFunctions::drawHmiData(){
   data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
   data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
   /******axis计算******/
-  auto axes_xlim = data_axes01_ptr_->get_xlim();
-  if (time_array.back() > get<1>(axes_xlim) - 10) {
-    float x_min = get<1>(axes_xlim) - 20.f;
-    float x_max = x_min + CMD_X_RANGE;
-    data_axes01_ptr_->set_xlim(Args(x_min, x_max));
-  }
+  rangeSet(true,time_array.back());
 }
 void AnimationFunctions::drawSteeringData(const shared_ptr<ComputeData> vehicle_data){
   static bool once_flag = true;
@@ -150,14 +168,7 @@ void AnimationFunctions::drawSteeringData(const shared_ptr<ComputeData> vehicle_
   data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
   data_axes03_ptr_->unwrap().attr("draw_artist")(legend_artist[2]);
   /******axis计算******/
-  auto axes_xlim = data_axes01_ptr_->get_xlim();
-  if (time_array.back() > get<1>(axes_xlim) - 10) {
-    float x_min = get<1>(axes_xlim) - 20.f;
-    float x_max = x_min + CMD_X_RANGE;
-    data_axes01_ptr_->set_xlim(Args(x_min, x_max));
-    data_axes02_ptr_->set_xlim(Args(x_min, x_max));
-    data_axes03_ptr_->set_xlim(Args(x_min, x_max));
-  }
+  rangeSet(false,time_array.back());
 }
 
 void AnimationFunctions::drawSteeringWheel(const shared_ptr<ComputeData> vehicle_data, const float& line_width){
@@ -335,15 +346,8 @@ void AnimationFunctions::drawBrakeData(const shared_ptr<ComputeData> vehicle_dat
   data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
   data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
   data_axes03_ptr_->unwrap().attr("draw_artist")(legend_artist[2]);
-  
-  auto axes_xlim = data_axes01_ptr_->get_xlim();
-  if (time_array.back() > get<1>(axes_xlim) - 5) {
-    float x_min = get<1>(axes_xlim) - 10.f;
-    float x_max = x_min + CMD_X_RANGE;
-    data_axes01_ptr_->set_xlim(Args(x_min, x_max));
-    data_axes02_ptr_->set_xlim(Args(x_min, x_max));
-    data_axes03_ptr_->set_xlim(Args(x_min, x_max));
-  }  
+  //axis set
+  rangeSet(false,time_array.back());
 }
 
 void AnimationFunctions::drawHmiButtonAndSwitch(){

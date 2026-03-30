@@ -21,10 +21,10 @@ namespace mpl = matplotlibcpp17;
 using matplotlibcpp17::gridspec::GridSpec;
 using mesh2D = vector<vector<float>>;
 
-const float CMD_X_RANGE = 100;
+const float CMD_X_RANGE = 100;     //显示数据长度
 const int Y_RANGE = 10;
 const float BAR_X = 3.0;
-const int DATA_BUFFER = 300;
+const int DATA_BUFFER = 100000;
 
 const vector<string> COLORS = {
   // 基本颜色
@@ -78,6 +78,7 @@ class AnimationFunctions {
     void drawStatusReport();
     void drawHmiData();
     void initSteerWheel(mpl::axes::Axes& axes);
+    void rangeSet(bool is_all,const int max_x);
 
   protected:
     //画框
