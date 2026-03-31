@@ -107,7 +107,7 @@ double BrakeTorqueObserver::ComputeRollingResis() {
 }
 
 /**
- * @brief:estimate brake gain(in brake state)
+ * @brief:estimate brake gain(brake_torque = gain * brake_pressure)
  * note:需要排除缓速器,坡道等外部扭矩的影响,车轮的转动惯量也忽略不计
  */
 double BrakeTorqueObserver::estimateBrakeGain(const double& v,
