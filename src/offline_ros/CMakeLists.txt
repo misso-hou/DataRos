@@ -22,6 +22,7 @@ find_package(pybind11 REQUIRED)
 find_package(matplotlibcpp17 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Protobuf REQUIRED)
 
 # 定义公共依赖（多个节点共享）
 set(COMMON_LIBS
@@ -58,15 +59,25 @@ include_directories(
   /home/workspace/common_protobuf/build/latest/plusai_common_proto
 )
 
-# 添加要构建的源代码文件
+# 添加要构建的proto源代码文件
 file(GLOB SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+# 编译proto文件
+file(GLOB PROTO_FILES "${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto")
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
+# 把生成的头文件路径加入包含目录
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+# 定义公共源文件（包含proto生成的源文件）
+set(COMMON_SRC_FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/function/ros_topic_parser.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/function/animation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/function/animation_functions.cpp
+  ${PROTO_SRCS}  # 添加proto生成的源文件
+)
 
 # --------------------转向数据播放器节点--------------------
 add_executable(steer_play_node
-  src/RosNode/steer_play_node.cpp      
-  src/function/ros_topic_parser.cpp    
-  src/function/animation.cpp
-  src/function/animation_functions.cpp
+  ${COMMON_SRC_FILES}
+  src/RosNode/steer_play_node.cpp       
   src/function/display_control.cpp
 )
 
@@ -78,10 +89,8 @@ target_link_libraries(steer_play_node
 
 # --------------------刹车数据播放器节点--------------------
 add_executable(brake_play_node
+  ${COMMON_SRC_FILES}
   src/RosNode/brake_play_node.cpp      
-  src/function/ros_topic_parser.cpp    
-  src/function/animation.cpp
-  src/function/animation_functions.cpp
   src/function/display_control.cpp
   src/algorithm/observer.cpp
 )
@@ -94,10 +103,8 @@ target_link_libraries(brake_play_node
 
 # --------------------转向实时运算节点--------------------
 add_executable(steer_realtime_node
+  ${COMMON_SRC_FILES}
   src/RosNode/steer_realtime_node.cpp      
-  src/function/ros_topic_parser.cpp    
-  src/function/animation.cpp
-  src/function/animation_functions.cpp
 )
 
 # ROS 与外部库的链接
@@ -108,10 +115,8 @@ target_link_libraries(steer_realtime_node
 
 # --------------------刹车实时运算节点--------------------
 add_executable(brake_realtime_node
+  ${COMMON_SRC_FILES}
   src/RosNode/brake_realtime_node.cpp      
-  src/function/ros_topic_parser.cpp    
-  src/function/animation.cpp
-  src/function/animation_functions.cpp
   src/algorithm/observer.cpp
 )
 
@@ -123,10 +128,8 @@ target_link_libraries(brake_realtime_node
 
 # --------------------HMI实时运算节点--------------------
 add_executable(hmi_realtime_node
+  ${COMMON_SRC_FILES}
   src/RosNode/hmi_realtime_node.cpp      
-  src/function/ros_topic_parser.cpp    
-  src/function/animation.cpp
-  src/function/animation_functions.cpp
 )
 
 # ROS 与外部库的链接
@@ -135,16 +138,13 @@ target_link_libraries(hmi_realtime_node
   ${VISUALIZATION_LIBS}
 )
 
-# --------------------ROS监听器节点-------------------
-add_executable(ros_listener_node
-  src/RosNode/ros_listener_node.cpp
-  src/function/ros_topic_parser.cpp
-)
 
-target_link_libraries(ros_listener_node
-  ${COMMON_LIBS}
-)
-
+# # 测试节点
+# add_executable(proto_test 
+#   src/RosNode/proto_test.cpp 
+#   ${PROTO_SRCS} ${PROTO_HDRS}
+# )
+# target_link_libraries(proto_test ${catkin_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
 ###########################INSTALL###########################
 # 安装执行文件

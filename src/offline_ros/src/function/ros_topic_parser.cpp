@@ -14,6 +14,8 @@ float TS = 0.05f;
 MsgParser::MsgParser(int argc, char *argv[]) {
     vehicle_data_ = std::make_shared<ComputeData>();
     rec_data_ = std::make_shared<RecordData>();
+    // 初始化proto对象
+    frame_data_ = std::make_shared<ProtoRecordData::FrameData>();
     // 获取包的路径
     std::string package_path = ros::package::getPath("offline_ros");
     // 构造绝对路径
@@ -37,6 +39,19 @@ MsgParser::MsgParser(int argc, char *argv[]) {
         csv_file_ << key << ",";
     }
     csv_file_ << "\n";
+
+
+
+    // 改为.proto文件（二进制格式）
+    proto_file_path_ = package_path + "/data/" + filename + ".proto_data";
+    proto_file_.open(proto_file_path_, std::ios::out | std::ios::binary);
+    if (!proto_file_.is_open()) {
+        ROS_ERROR("Failed to open proto file: %s", proto_file_path_.c_str());
+        return;
+    }
+
+
+
     dbw_sub_ = nh_.subscribe("/vehicle/dbw_reports", 1000, &MsgParser::dbw_callback, this);
     ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
     watchdog_sub_ = nh_.subscribe("/watchdog/current_state",1000, &MsgParser::watchdog_callback, this);
@@ -79,6 +94,7 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
         }else{
             swa_dot_ = (dbw_report.steering_report().steering_wheel_angle() - rec_data_->data.at("steer_wheel_angle")) / TS;
         }
+
         // realtime data
         rec_data_->data.at("steer_wheel_angle") = dbw_report.steering_report().steering_wheel_angle();
         rec_data_->data.at("steer_wheel_torque_filtered") = dbw_report.steering_report().steering_wheel_torque();
@@ -98,6 +114,39 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
         brake_pressure_filtered_ = Math::LowPassFilter(rec_data_->data.at("brake_pressure"),brake_pressure_filtered_,0.05);
         // HMI data -> buttons and switches
         updateHmiData(dbw_report);
+
+        frame_data_->set_timestamp_msec(dbw_report.header().timestamp_msec());
+        //realtime data
+        auto* realtime_data = frame_data_->mutable_vehicle_data();
+        realtime_data->set_steer_wheel_angle(dbw_report.steering_report().steering_wheel_angle());
+        realtime_data->set_steer_wheel_torque(dbw_report.steering_report().steering_wheel_torque());
+        realtime_data->set_wheel_speed(dbw_report.wheel_speed_report().front_axle_speed());
+        realtime_data->set_yaw_rate(dbw_report.vehicle_dynamic().angular_velocity().z());
+        realtime_data->set_brake_pressure(dbw_report.brake_msg_3().brake_pressure_front_axle_left_wheel());
+        realtime_data->set_speed(dbw_report.steering_report().speed());
+        realtime_data->set_acc_enable(dbw_report.acc_enabled());
+        realtime_data->set_pilot_enable(dbw_report.superpilot_enabled());
+        //computed data
+        auto* computed_data = frame_data_->mutable_computed_data();
+        computed_data->set_steer_wheel_torque_filtered(swt_filtered_);
+        computed_data->set_brake_pressure_filtered(brake_pressure_filtered_);
+        computed_data->set_steer_wheel_angle_dot(swa_dot_);
+        //hmi data
+        auto* hmi = frame_data_->mutable_hmi_data();
+        auto* button = hmi->mutable_buttons();
+        button->set_acc_engage(dbw_report.hmi_report().acc_engage_button_pressed());
+        button->set_acc_disengage(dbw_report.hmi_report().acc_disengage_button_pressed());
+        button->set_acc_restore(dbw_report.hmi_report().acc_restore_button_pressed());
+        button->set_pilot_engage(dbw_report.hmi_report().super_pilot_engage_button_pressed());
+        button->set_pilot_disengage(dbw_report.hmi_report().super_pilot_disengage_button_pressed());
+        button->set_acc_increase(dbw_report.hmi_report().acc_set_inc_button_pressed());
+        button->set_acc_decrease(dbw_report.hmi_report().acc_set_dec_button_pressed());
+        auto* switch_pb = hmi->mutable_switches();
+        switch_pb->set_acc_switch(dbw_report.hmi_report().acc_switch());
+        switch_pb->set_pilot_switch(dbw_report.hmi_report().pilot_switch());
+        switch_pb->set_noa_switch(dbw_report.hmi_report().noa_switch_button_pressed());
+        //记录数据
+        writeFrameToFile(*frame_data_);
     }
 
     // 提取→转秒→转时间
@@ -120,9 +169,31 @@ void MsgParser::dbw_callback(const std_msgs::String::ConstPtr& msg)
                     std::to_string((milliseconds/10)%10) + 
                     std::to_string(milliseconds%10);
 
-    auto record_data = rec_data_->getData();
+    auto RecordData = rec_data_->getData();
 
-    writeToCSV(ts_msec, record_data);
+    writeToCSV(ts_msec, RecordData);
+}
+
+void MsgParser::writeFrameToFile(const ProtoRecordData::FrameData& frame) {
+    if (!proto_file_.is_open()) return;
+    
+    // 序列化
+    std::string serialized_data;
+    if (!frame.SerializeToString(&serialized_data)) {
+        ROS_ERROR("Failed to serialize frame data");
+        return;
+    }
+    
+    // 写入长度前缀 + 数据
+    uint32_t size = serialized_data.size();
+    proto_file_.write(reinterpret_cast<const char*>(&size), sizeof(size));
+    proto_file_.write(serialized_data.data(), size);
+    
+    // 可选：定期flush
+    static int frame_count = 0;
+    if (++frame_count % 100 == 0) {
+        proto_file_.flush();
+    }
 }
 
 void MsgParser::updateHmiData(const control::DbwReports& dbw_report) {
@@ -149,10 +220,15 @@ void MsgParser::ctrl_callback(const std_msgs::String::ConstPtr& msg)
     // 提取数据
     {
         std::lock_guard<std::mutex> lock(data_mutex_);
-        rec_data_->data.at("ebs_cmd") = control_cmd.brake_cmd().target_acceleration();
         rec_data_->data.at("acc_mes") = control_cmd.debug_cmd().a_report();
         rec_data_->data.at("acc_ref") = control_cmd.debug_cmd().a_target();
         rec_data_->data.at("pitch") =  control_cmd.debug_cmd().pitch_angle();
+
+        //realtime data(control)
+        auto* realtime_data = frame_data_->mutable_vehicle_data();
+        realtime_data->set_acc_mes(control_cmd.debug_cmd().a_report());
+        realtime_data->set_acc_ref(control_cmd.debug_cmd().a_target());
+        realtime_data->set_pitch(control_cmd.debug_cmd().pitch_angle());
     }
 }
 
@@ -255,7 +331,6 @@ HmiData MsgParser::getHmiData() {
             watchdog_state_,
             status_report_};
 }
-
 
 }
 } // namespace name

@@ -12,6 +12,7 @@
 #include "plusai_common_proto/control/control_command.pb.h"
 #include "plusai_common_proto/monitor/app_watchdog_state.pb.h"
 #include "plusai_common_proto/monitor/status_report_msg.pb.h"
+#include "monitor_data.pb.h"
 
 namespace func {
 namespace msg_parser {
@@ -235,6 +236,7 @@ class MsgParser {
         void statusReport_callback(const std_msgs::String::ConstPtr& msg);
         void writeToCSV(const long long timestamp, const std::vector<float>& data);
         void updateHmiData(const control::DbwReports& dbw_report);
+        void writeFrameToFile(const ProtoRecordData::FrameData& frame);
     
     private:
         ros::NodeHandle nh_;
@@ -245,12 +247,16 @@ class MsgParser {
         std::ofstream csv_file_;
         std::string csv_file_path_;
         std::mutex data_mutex_;
+        // 新增：文件写入相关
+        std::ofstream proto_file_;
+        std::string proto_file_path_;
 
     private:   // 数据成员变量
         std::string local_time_;
         std::vector<float> record_data_;
         std::shared_ptr<ComputeData> vehicle_data_;
         std::shared_ptr<RecordData> rec_data_;
+        std::shared_ptr<ProtoRecordData::FrameData> frame_data_;
         bool first_flag_ = true;
         ButtonAndSwitch button_switch_;
         Watchdog watchdog_state_;
