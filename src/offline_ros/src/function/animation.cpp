@@ -227,10 +227,12 @@ void Animation::InitVehicleMonitor() {
   status_report_axes_ptr_->set_title(Args("status_report"),Kwargs("fontsize"_a = 15,"color"_a = "red","fontweight"_a="bold"));
   //----------------------------data curve----------------------------                                            
   //axes03
-  auto axes_obj_01 = figure.add_subplot(Args(gs(1, py::slice(2, 8, 1)).unwrap()),Kwargs("facecolor"_a = "gray"));           
+  float y_min = -2.0;
+  float y_max = 5.0;
+  auto axes_obj_01 = figure.add_subplot(Args(gs(1, py::slice(2, 8, 1)).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
   data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);    
   data_axes01_ptr_->set_xlim(Args(-0.3f, CMD_X_RANGE));
-  data_axes01_ptr_->set_ylim(Args(-4.0, 4.0));
+  data_axes01_ptr_->set_ylim(Args(y_min, y_max));
   data_axes01_ptr_->set_xticklabels(Args(py::list()));
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
@@ -238,7 +240,7 @@ void Animation::InitVehicleMonitor() {
   auto axes_obj_02 = figure.add_subplot(Args(gs(2, py::slice(2, 8, 1)).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
   data_axes02_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_02);    
   data_axes02_ptr_->set_xlim(Args(-0.3f, CMD_X_RANGE));
-  data_axes02_ptr_->set_ylim(Args(-1, 30));   
+  data_axes02_ptr_->set_ylim(Args(y_min, y_max));   
   data_axes02_ptr_->set_xticklabels(Args(py::list()));
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
@@ -246,7 +248,7 @@ void Animation::InitVehicleMonitor() {
   auto axes_obj_03 = figure.add_subplot(Args(gs(3, py::slice(2, 8, 1)).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
   data_axes03_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_03);    
   data_axes03_ptr_->set_xlim(Args(-0.3f, CMD_X_RANGE));
-  data_axes03_ptr_->set_ylim(Args(-2.5, 2.5));  
+  data_axes03_ptr_->set_ylim(Args(y_min, y_max));  
   data_axes03_ptr_->set_xticklabels(Args(py::list())); 
   data_plt_.show(Args(), Kwargs("block"_a = 0));
   data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));

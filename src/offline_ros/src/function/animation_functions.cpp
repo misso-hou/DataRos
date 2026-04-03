@@ -51,11 +51,13 @@ void AnimationFunctions::drawHmiData(){
   int data_num = hmi_plt_data_.status_report.status.size();
   static map<string,vector<float>> line_data;
   static map<string,py::object> lines_artists;
-  static vector<py::object> legend_artist(1);
+  static vector<py::object> legend_artist(3);
   //标注数据
   static py::object text_artist;
   string local_time = "local time: " + hmi_plt_data_.local_time;
   line_data["VEHICLE_WIPER_STATUS"].push_back(hmi_plt_data_.status_report.status.at("VEHICLE_WIPER_STATUS"));
+  line_data["BSD_RIGHT_LED_NA"].push_back(hmi_plt_data_.status_report.status.at("BSD_RIGHT_LED_NA"));
+  line_data["BSD_LEFT_LED_NA"].push_back(hmi_plt_data_.status_report.status.at("BSD_LEFT_LED_NA"));
   // 横轴数据更新
   static vector<int> time_array;
   static int tick = 0;
@@ -72,9 +74,12 @@ void AnimationFunctions::drawHmiData(){
     once_flag = false;
     py::object trans_figure = data_axes01_ptr_->unwrap().attr("transAxes");
     text_artist = data_axes01_ptr_->text(Args(0.5, 1.0, "local time: " + hmi_plt_data_.local_time),Kwargs("transform"_a = trans_figure,"va"_a = "bottom", "ha"_a = "center", "fontsize"_a = "large", "fontweight"_a = "bold")).unwrap();
-    int color_count = 0;
-    lines_artists["VEHICLE_WIPER_STATUS"] = data_axes01_ptr_->plot(Args(time_array, line_data.at("VEHICLE_WIPER_STATUS")), Kwargs("c"_a = COLORS[color_count], "lw"_a = 1.0,"label"_a = "VEHICLE_WIPER_STATUS")).unwrap().cast<py::list>()[0];
+    lines_artists["VEHICLE_WIPER_STATUS"] = data_axes01_ptr_->plot(Args(time_array, line_data.at("VEHICLE_WIPER_STATUS")), Kwargs("c"_a = COLORS[0], "lw"_a = 1.0,"label"_a = "VEHICLE_WIPER_STATUS")).unwrap().cast<py::list>()[0];
     legend_artist[0] = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+    lines_artists["BSD_RIGHT_LED_NA"] = data_axes02_ptr_->plot(Args(time_array, line_data.at("BSD_RIGHT_LED_NA")), Kwargs("c"_a = COLORS[1], "lw"_a = 1.0,"label"_a = "BSD_RIGHT_LED_NA")).unwrap().cast<py::list>()[0];
+    legend_artist[1] = data_axes02_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+    lines_artists["BSD_LEFT_LED_NA"] = data_axes03_ptr_->plot(Args(time_array, line_data.at("BSD_LEFT_LED_NA")), Kwargs("c"_a = COLORS[2], "lw"_a = 1.0,"label"_a = "BSD_LEFT_LED_NA")).unwrap().cast<py::list>()[0];
+    legend_artist[2] = data_axes03_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
   }
   /*step03->artist实时数据更新并绘制*/
   for (auto& line_artist : lines_artists) {
@@ -86,9 +91,12 @@ void AnimationFunctions::drawHmiData(){
   text_artist.attr("set_text")("local time: " + hmi_plt_data_.local_time);
   data_axes01_ptr_->unwrap().attr("draw_artist")(text_artist);
   data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist[0]);
+  data_axes02_ptr_->unwrap().attr("draw_artist")(legend_artist[1]);
+  data_axes03_ptr_->unwrap().attr("draw_artist")(legend_artist[2]);
   /******axis计算******/
   rangeSet(true,time_array.back());
 }
+
 void AnimationFunctions::drawSteeringData(const shared_ptr<ComputeData> vehicle_data){
   static bool once_flag = true;
   /******数据计算******/
