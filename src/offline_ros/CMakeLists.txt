@@ -139,12 +139,13 @@ target_link_libraries(hmi_realtime_node
 )
 
 
-# # 测试节点
-# add_executable(proto_test 
-#   src/RosNode/proto_test.cpp 
-#   ${PROTO_SRCS} ${PROTO_HDRS}
-# )
-# target_link_libraries(proto_test ${catkin_LIBRARIES} ${PROTOBUF_LIBRARIES})
+# 测试节点
+add_executable(proto_test 
+  ${COMMON_SRC_FILES}
+  src/RosNode/proto_test.cpp 
+  src/function/display_control.cpp
+)
+target_link_libraries(proto_test ${COMMON_LIBS})
 
 ###########################INSTALL###########################
 # 安装执行文件

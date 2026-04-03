@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
     auto vehicle_data = std::make_shared<func::msg_parser::ComputeData>();
     //数据获取
-    static float swt_filtered = RecordData.at("steer_wheel_torque_filtered")[i];
-    swt_filtered = Math::LowPassFilter(RecordData.at("steer_wheel_torque_filtered")[i],swt_filtered,0.05);
+    static float swt_filtered = record_data.at("steer_wheel_torque_filtered")[i];
+    swt_filtered = Math::LowPassFilter(record_data.at("steer_wheel_torque_filtered")[i],swt_filtered,0.05);
     float swa_dot = i <= 1 ? 0 : 
                     (record_data.at("steer_wheel_angle")[i] - record_data.at("steer_wheel_angle")[i-1]) / TS;
     vehicle_data->data.at("adas_state") = record_data.at("adas_state")[i];
