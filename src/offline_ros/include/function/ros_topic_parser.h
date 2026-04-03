@@ -237,6 +237,9 @@ class MsgParser {
         void writeToCSV(const long long timestamp, const std::vector<float>& data);
         void updateHmiData(const control::DbwReports& dbw_report);
         void writeFrameToFile(const ProtoRecordData::FrameData& frame);
+        void updataFrameData(const control::DbwReports& dbw_report);
+        void updataCsvData(const control::DbwReports& dbw_report);
+        void updateLocalTime(const long long& ts_msec);
     
     private:
         ros::NodeHandle nh_;
