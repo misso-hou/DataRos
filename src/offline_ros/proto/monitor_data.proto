@@ -1,0 +1,75 @@
+syntax = "proto3";  // 使用proto3版本
+
+package ProtoRecordData;  // 命名空间
+
+message Button {
+    bool acc_engage = 1;
+    bool acc_disengage = 2;
+    bool acc_restore = 3;
+    bool pilot_engage = 4;
+    bool pilot_disengage = 5;
+    bool acc_increase = 6;
+    bool acc_decrease = 7;
+}
+
+message Switch {
+    bool acc_switch = 1;
+    bool pilot_switch = 2;
+    bool noa_switch = 3;
+}
+
+message HMI {
+    Button buttons = 1;
+    Switch switches = 2;
+}
+
+message WatchdogState {
+    int32 acc = 1;
+    int32 pilot = 2;
+    int32 noa = 3;
+    int32 aeb = 4;
+    int32 ldw = 5;
+    int32 dms = 6;
+    int32 bsd = 7;
+}
+
+message StatusReport {
+    int32 vehicle_wiper_status = 1;
+    int32 bsd_right_led_na = 2;
+    int32 bsd_left_led_na = 3;
+    int32 bsd_switch_err = 4;
+}
+
+message RealtimeData {
+    float steer_wheel_angle = 1;
+    float steer_wheel_torque = 2;
+    float wheel_speed = 3;
+    float yaw_rate = 4;
+    float ebs_cmd = 5;
+    float acc_mes = 6;
+    float acc_ref = 7;
+    float speed = 8;
+    float pitch = 9;
+    float brake_pressure = 10;
+    float acc_enable = 11;
+    int32 pilot_enable = 12;
+}
+
+message ComputedData {
+    float brake_pressure_filtered = 1;
+    float brake_gain = 2;
+    float steer_wheel_torque_filtered = 3;
+    float steer_wheel_angle_dot = 4;
+    float steer_wheel_torque_mode = 5;
+    float long_window_mean = 6;
+    float short_window_mean = 7;
+}
+
+message FrameData {
+    int64 timestamp_msec = 1;
+    HMI hmi_data = 2;
+    WatchdogState watchdog = 3;
+    StatusReport report_status = 4;
+    RealtimeData vehicle_data = 5;
+    ComputedData computed_data = 6;
+}

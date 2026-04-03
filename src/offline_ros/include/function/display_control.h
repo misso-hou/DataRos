@@ -31,6 +31,8 @@ class DisplayControl
         void SetParam(int argc, char *argv[]);
         mesh2D ExtractDataInRow(int argc, char *argv[]);
         map<string,vector<float>> ExtractDataInColumn(int argc, char *argv[]);
+        //proto数据
+        std::vector<ProtoRecordData::FrameData> loadFramesData(int argc, char *argv[]);
         // 按键控制相关函数
         char GetKey();
         string GetKeyWithTimeout(int timeout_ms);
