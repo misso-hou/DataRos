@@ -25,15 +25,6 @@ using namespace std;
 namespace Anim = modules::animation;
 Anim::Animation *Animator = Anim::Animation::GetInstance();
 
-
-/*
- * ---------数据回放使用方法----------：
- * 执行命令：./csvPlt+"播放速度设置“+”播放位置设置“+”csv文件夹序号“+”csv文件夹内部文件序号“
- * 播放速度默认为1
- * 播放位置默认从头开始
- * 文件夹默认为csv文件不带后缀序号
- * csv文件内部默认只有一组数据
- */
 int main(int argc, char *argv[]) {
   std::cout << "Main thread running..." << std::endl;
   ros::init(argc, argv, "brake_realtime_module");

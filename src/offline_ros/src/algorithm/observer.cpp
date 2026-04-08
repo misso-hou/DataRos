@@ -91,9 +91,8 @@ void BrakeTorqueObserver::stateUpdate(const double& pressure,
  */
 double BrakeTorqueObserver::computeCoastingForce(const double& v) {
     double aero_drag = ComputeAeroDrag(v);           
-    double roll_resistance = ComputeRollingResis();   // REVIEW:
-    // double F_grav = ComputeGravityLoad(vehicle_mass, pitch);
-    // double F_total = - F_aero - F_roll - F_grav;
+    double roll_resistance = ComputeRollingResis();
+    // double F_grav = ComputeGravityLoad(vehicle_mass, pitch); // TODO:
     double total_force = -aero_drag - roll_resistance;
     return total_force;
 }
@@ -111,8 +110,8 @@ double BrakeTorqueObserver::ComputeRollingResis() {
  * note:需要排除缓速器,坡道等外部扭矩的影响,车轮的转动惯量也忽略不计
  */
 double BrakeTorqueObserver::estimateBrakeGain(const double& v,
-                                            const double& acc_mes, 
-                                            const double& pressure){
+                                              const double& acc_mes, 
+                                              const double& pressure){
     //calculate coasting force
     double coasting_force = computeCoastingForce(v);
     //calculate tyre-road contact force(longitudinal force - coasting force) 

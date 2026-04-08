@@ -45,6 +45,7 @@ int main(int argc, char *argv[]) {
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
     auto vehicel_data = std::make_shared<func::msg_parser::ComputeData>();
     //数据获取
+    vehicel_data->local_time = disp_ctrl_ptr->getLogTimestamp(i);
     vehicel_data->data.at("ebs_cmd") = record_data.at("ebs_cmd")[i];
     vehicel_data->data.at("acc_mes") = record_data.at("acc_mes")[i];
     vehicel_data->data.at("acc_ref") = record_data.at("acc_ref")[i];

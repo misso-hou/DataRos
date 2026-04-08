@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
     int64_t start_time = TimeToolKit::TimeSpecSysCurrentMs();
     auto vehicle_data = std::make_shared<func::msg_parser::ComputeData>();
     //数据获取
+    vehicle_data->local_time = disp_ctrl_ptr->getLogTimestamp(i);
     static float swt_filtered = record_data.at("steer_wheel_torque_filtered")[i];
     swt_filtered = Math::LowPassFilter(record_data.at("steer_wheel_torque_filtered")[i],swt_filtered,0.05);
     float swa_dot = i <= 1 ? 0 : 
