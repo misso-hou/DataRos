@@ -459,5 +459,46 @@ void AnimationFunctions::initSteerWheel(mpl::axes::Axes& axes){
   steering_wheel_axes_ptr_->set_aspect(Args("equal"));
 }
 
+void AnimationFunctions::drawPedalBar(const shared_ptr<ComputeData> vehicle_data){
+  auto artists = bar_artists_.cast<py::list>();
+  vector<float> rate(2);
+  rate[0] = vehicle_data->data.at("gas_pedal");
+  rate[1] = vehicle_data->data.at("brake_pedal");
+  vector<string> labels(2);
+  char buf[64];
+  // 保留 1 位小数
+  snprintf(buf, sizeof(buf), "Trottle %.1f%%", rate[0] * 100);
+  labels[0] = buf;
+  snprintf(buf, sizeof(buf), "Brake %.1f%%", rate[1] * 100);
+  labels[1] = buf;
+  //process bar
+  for(int i=0;i<artists.size();i++){
+    artists[i].attr("set_width")(rate[i]);
+    bar_axes_ptr_->unwrap().attr("draw_artist")(artists[i]);
+  }
+  //test 
+  static bool once_flag = true;
+  static vector<py::object> text_artist(2);
+  if (once_flag) {
+    once_flag = false;
+    for(int i=0;i<labels.size();i++){
+      // 计算矩形中心点坐标（使用正确的左下角坐标）
+      double center_y = 0.85 - i*0.4;
+      // 在矩形中心添加文字
+      auto artist = bar_axes_ptr_->text(Args(0.0, center_y, labels[0]),
+                                              Kwargs("ha"_a = "left",
+                                                      "va"_a = "center",
+                                                      "color"_a = "black",
+                                                      "fontsize"_a = 12));
+      text_artist[i] = artist.unwrap();
+    }    
+  }
+  //绘制watchdog状态
+  for (int i = 0; i < labels.size(); i++) {
+    text_artist[i].attr("set_text")(labels[i]);
+    bar_axes_ptr_->unwrap().attr("draw_artist")(text_artist[i]);
+  }
+}
+
 }
 }

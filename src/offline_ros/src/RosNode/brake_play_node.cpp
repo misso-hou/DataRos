@@ -60,6 +60,8 @@ int main(int argc, char *argv[]) {
     vehicel_data->data.at("brake_pressure_filtered") = filtered_bp*(-0.01);
     vehicel_data->data.at("brake_gain") = brake_gain*(0.01);
     vehicel_data->data.at("steer_wheel_angle") = record_data.at("steer_wheel_angle")[i];
+    vehicel_data->data.at("gas_pedal") = record_data.at("gas_pedal")[i];
+    vehicel_data->data.at("brake_pedal") = record_data.at("brake_pedal")[i];
     /*------动画显示-----*/
     Animator->BrakeMonitor(vehicel_data);
     int64_t end_time = TimeToolKit::TimeSpecSysCurrentMs();

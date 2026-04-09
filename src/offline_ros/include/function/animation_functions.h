@@ -77,6 +77,7 @@ class AnimationFunctions {
     void drawWatchdogState();
     void drawStatusReport();
     void drawHmiData();
+    void drawPedalBar(const shared_ptr<func::msg_parser::ComputeData> vehicle_data);
     void initSteerWheel(mpl::axes::Axes& axes);
     void rangeSet(bool is_all,const int max_x);
 
@@ -100,6 +101,7 @@ class AnimationFunctions {
     py::object jet_cmap_;
     // artist
     py::object hmi_rect_patches_; 
+    py::object bar_artists_;
 
     // data
     vector<float> steer_wheel_plt_data_;

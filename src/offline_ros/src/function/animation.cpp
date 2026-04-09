@@ -131,6 +131,29 @@ void Animation::InitBrakeSysPlt() {
   auto steering_wheel_axes_obj = figure.add_subplot(Args(gs(0, 7).unwrap()));
   initSteerWheel(steering_wheel_axes_obj);
   data_plt_.axis(Args("scaled"));
+  //------------------------------------刹车+油门---------------------------------------
+  auto bar_axes_obj = figure.add_subplot(Args(gs(1,7).unwrap())); 
+  bar_axes_ptr_ = make_shared<mpl::axes::Axes>(bar_axes_obj);
+  const vector<float> y_pos = {0.7, 0.3};
+  // const vector<float> legend_pos = {-0.1,0.7};
+  const vector<float> height = {0.0,0.0};
+  const vector<float> frame_height = {1,1};
+  // const vector<string> lable = {"Trottle", "Brake"};
+  const vector<string> color = {"green", "red"};
+  auto hbars = bar_axes_ptr_->barh(Args(y_pos, height,0.1),
+                                        Kwargs("align"_a = "center","color"_a = color));
+  bar_artists_ = hbars.unwrap();
+  auto hbars_test = bar_axes_ptr_->barh(Args(y_pos,frame_height,0.11),Kwargs("align"_a = "center",
+                                                                        "facecolor"_a = "none",
+                                                                        "edgecolor"_a = "lightgray",
+                                                                        "linewidth"_a = 2.0));
+  bar_axes_ptr_->set_xlim(Args(), Kwargs("right"_a = 1));
+  bar_axes_ptr_->set_ylim(Args(0.0, 1.0));
+   // labels read top-to-bottom
+  // bar_axes_ptr_->legend(Args(hbars.unwrap(), lable),
+  //                       Kwargs("ncols"_a = 2, "bbox_to_anchor"_a = legend_pos,
+  //                              "loc"_a = "lower left", "fontsize"_a = "small"));
+  bar_axes_ptr_->unwrap().attr("set_axis_off")();
   data_plt_.pause(Args(0.1));
   data_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());
 }
@@ -294,6 +317,7 @@ void Animation::BrakeMonitor(const shared_ptr<func::msg_parser::ComputeData> veh
   canvas_restore_region(data_figure_ptr_->unwrap(), data_background_);
   drawBrakeData(vehicel_data);
   drawSteeringWheel(vehicel_data,10.0);
+  drawPedalBar(vehicel_data);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 

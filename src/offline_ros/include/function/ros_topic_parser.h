@@ -78,7 +78,9 @@ struct ComputeData {
                                       "steer_wheel_torque_mode",
                                       "long_window_mean",
                                       "short_window_mean",
-                                      "adas_state"
+                                      "adas_state",
+                                      "gas_pedal",
+                                      "brake_pedal"
                                       };
     std::map<std::string, float> data;
 
@@ -203,7 +205,9 @@ struct RecordData {
                                       "speed",
                                       "pitch",
                                       "brake_pressure",
-                                      "adas_state"};
+                                      "adas_state",
+                                      "gas_pedal",
+                                      "brake_pedal"};
     RecordData() {
         for (const std::string& key : order) {
             data[key] = 0.0f;
