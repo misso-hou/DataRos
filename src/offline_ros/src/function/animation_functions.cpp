@@ -500,5 +500,57 @@ void AnimationFunctions::drawPedalBar(const shared_ptr<ComputeData> vehicle_data
   }
 }
 
+void AnimationFunctions::drawCanMsg(const vector<PlotCanMsg>& can_data){
+  static bool once_flag = true;
+  /******数据计算******/
+  /*step01->实时数据更新*/
+  int data_num = can_data.size();
+  static map<string,vector<float>> line_data;
+  static map<string,py::object> lines_artists;
+  static py::object legend_artist;
+  //标注数据
+  for(const auto& data:can_data){
+    line_data[data.idToHexString()].push_back(data.value);
+  }
+  // 横轴数据更新
+  static vector<int> time_array;
+  static int tick = 0;
+  time_array.push_back(tick++);
+  // 纵轴数据更新
+  if (time_array.size() > DATA_BUFFER) {
+    time_array.erase(time_array.begin());
+    for(auto& pair:line_data){
+      pair.second.erase(pair.second.begin());
+    }
+  }
+  /*step02->static artist生成*/
+  if (once_flag) {
+    once_flag = false;
+    int color_tick = 0;
+    for(const auto& data:can_data){
+      string label = data.idToHexString() + ": " + to_string(data.start_bit) + ": " + to_string(data.bit_len) + "=" + to_string(data.value);
+      lines_artists[data.idToHexString()] = data_axes01_ptr_->plot(Args(time_array, line_data.at(data.idToHexString())), Kwargs("c"_a = COLORS[color_tick], "lw"_a = 1.0,"label"_a = label)).unwrap().cast<py::list>()[0];
+      color_tick++;   
+    }
+    legend_artist = data_axes01_ptr_->legend(Args(),Kwargs("loc"_a = "upper right")).unwrap();
+  }
+  /*step03->artist实时数据更新并绘制*/
+  for (auto& line_artist : lines_artists) {
+    auto key = line_artist.first;
+    line_artist.second.attr("set_data")(time_array, line_data.at(key));
+    data_axes01_ptr_->unwrap().attr("draw_artist")(line_artist.second);
+  }
+
+  data_axes01_ptr_->unwrap().attr("draw_artist")(legend_artist);
+  /******axis计算******/
+  auto axes_xlim = data_axes01_ptr_->get_xlim();
+  auto range = get<1>(axes_xlim) - get<0>(axes_xlim);
+  if (time_array.back() > (range*0.6)) {
+    float x_min = get<0>(axes_xlim); 
+    float x_max = get<1>(axes_xlim) + 2;
+    data_axes01_ptr_->set_xlim(Args(x_min, x_max));
+  }
+}
+
 }
 }

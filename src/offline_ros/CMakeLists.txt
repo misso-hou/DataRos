@@ -138,6 +138,17 @@ target_link_libraries(hmi_realtime_node
   ${VISUALIZATION_LIBS}
 )
 
+# --------------------CAN报文监测实时运算节点--------------------
+add_executable(can_monitor_node
+  ${COMMON_SRC_FILES}
+  src/RosNode/can_monitor_node.cpp      
+)
+
+# ROS 与外部库的链接
+target_link_libraries(can_monitor_node
+  ${COMMON_LIBS}
+  ${VISUALIZATION_LIBS}
+)
 
 # 测试节点
 add_executable(proto_test 
@@ -155,6 +166,7 @@ install(TARGETS
   steer_realtime_node 
   brake_realtime_node
   hmi_realtime_node
+  can_monitor_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
