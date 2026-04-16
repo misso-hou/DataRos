@@ -27,9 +27,11 @@ class Animation : public utilities::Singleton<Animation>, public AnimationFuncti
                        const std::unordered_map<int, int>& freq02);
   void BrakeMonitor(const shared_ptr<func::msg_parser::ComputeData> vehicel_data);
   void VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> vehicel_data);
+  void CanMonitor(const vector<func::msg_parser::PlotCanMsg>& can_data);
   void InitWeightedWindowsPlt();
   void InitBrakeSysPlt();
   void InitVehicleMonitor();
+  void InitCanMsgMonitor();
 };
 }  // namespace animation
 }  // namespace modules

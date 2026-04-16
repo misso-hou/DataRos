@@ -283,6 +283,32 @@ void Animation::InitVehicleMonitor() {
   vehicle_monitor_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());                                          
 }
 
+void Animation::InitCanMsgMonitor() {
+  pybind11::dict fig_kwargs("figsize"_a = py::make_tuple(14, 7), "dpi"_a = 100, "tight_layout"_a = true);
+  data_plt_ = mpl::pyplot::import();                                
+  mpl::figure::Figure figure = data_plt_.figure(Args(), fig_kwargs); 
+  data_figure_ptr_ = make_shared<mpl::figure::Figure>(figure);
+
+  auto gs = data_figure_ptr_->add_gridspec(4, 8,
+                                            Kwargs("left"_a = 0.02, "right"_a = 0.99,
+                                                  "bottom"_a = 0.04, "top"_a = 0.97,
+                                                  "wspace"_a = 0.25, "hspace"_a = 0.2));
+  //----------------------------data curve----------------------------                                            
+  //axes03
+  float y_min = -1.0;
+  float y_max = 15.0;
+  auto axes_obj_01 = figure.add_subplot(Args(gs(py::slice(0, 4, 1), py::slice(0, 8, 1)).unwrap()),Kwargs("facecolor"_a = "darkgrey"));           
+  data_axes01_ptr_ = make_shared<mpl::axes::Axes>(axes_obj_01);    
+  data_axes01_ptr_->set_title(Args("CAN monitor"));
+  data_axes01_ptr_->set_xlim(Args(-0.3f, CMD_X_RANGE));
+  data_axes01_ptr_->set_ylim(Args(y_min, y_max));
+  data_axes01_ptr_->set_xticklabels(Args(py::list()));
+  data_plt_.show(Args(), Kwargs("block"_a = 0));
+  data_plt_.grid(Args(true), Kwargs("linestyle"_a = "--", "linewidth"_a = 0.5, "color"_a = "black", "alpha"_a = 0.5));
+  data_plt_.pause(Args(0.1));
+  can_monitor_background_ = canvas_copy_from_bbox(data_figure_ptr_->unwrap());                                          
+}
+
 void Animation::SetSteerWheelData(const vector<float>& new_data) {
   steer_wheel_plt_data_ = new_data;
 }
@@ -332,6 +358,16 @@ void Animation::VehicleMonitor(const shared_ptr<func::msg_parser::ComputeData> v
   drawStatusReport();
   drawHmiData();
   drawSteeringWheel(vehicel_data,10.0);
+  canvas_update_flush_events(data_figure_ptr_->unwrap());
+}
+
+void Animation::CanMonitor(const vector<PlotCanMsg>& can_data) {
+  /******动画频率设置******/
+  static int64_t last_sim_time_stamp = 0;
+  if (frequencyCtrl(DURATION, last_sim_time_stamp)) return;
+  /******绘图******/
+  canvas_restore_region(data_figure_ptr_->unwrap(), can_monitor_background_);
+  drawCanMsg(can_data);
   canvas_update_flush_events(data_figure_ptr_->unwrap());
 }
 

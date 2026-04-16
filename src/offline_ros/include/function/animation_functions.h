@@ -78,6 +78,7 @@ class AnimationFunctions {
     void drawStatusReport();
     void drawHmiData();
     void drawPedalBar(const shared_ptr<func::msg_parser::ComputeData> vehicle_data);
+    void drawCanMsg(const vector<func::msg_parser::PlotCanMsg>& can_data);
     void initSteerWheel(mpl::axes::Axes& axes);
     void rangeSet(bool is_all,const int max_x);
 
@@ -98,6 +99,7 @@ class AnimationFunctions {
     // background
     py::object data_background_;
     py::object vehicle_monitor_background_;
+    py::object can_monitor_background_;
     py::object jet_cmap_;
     // artist
     py::object hmi_rect_patches_; 

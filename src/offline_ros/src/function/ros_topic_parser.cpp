@@ -52,6 +52,7 @@ MsgParser::MsgParser(int argc, char *argv[]) {
     ctrl_sub_ = nh_.subscribe("/vehicle/control_cmd", 1000, &MsgParser::ctrl_callback, this);
     watchdog_sub_ = nh_.subscribe("/watchdog/current_state",1000, &MsgParser::watchdog_callback, this);
     status_report_sub_ = nh_.subscribe("/vehicle/status_report",1000, &MsgParser::statusReport_callback, this);
+    can_sub_ = nh_.subscribe("/vehicle/dbw_all_can",1000, &MsgParser::can_callback, this);
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
 }
 
@@ -297,6 +298,21 @@ void MsgParser::statusReport_callback(const std_msgs::String::ConstPtr& msg)
     }
 }
 
+void MsgParser::can_callback(const std_msgs::String::ConstPtr& msg){
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    control::CanFDList can_pb;
+    can_pb.ParseFromString(msg->data);
+    for (const auto& canfd : can_pb.canfd_list())
+    {
+        uint32_t can_id = canfd.can_id();
+        const std::string& data_str = canfd.data();
+        const uint8_t* data = (const uint8_t*)data_str.data();
+        CanFrame frame;
+        memcpy(frame.data, data, std::min((size_t)8, data_str.size()));
+        can_frames_[can_id] = frame;
+    }
+}
+
 void MsgParser::writeToCSV(const long long timestamp, const std::vector<float>& data) {
     if (!csv_file_.is_open())
     {
@@ -349,5 +365,31 @@ HmiData MsgParser::getHmiData() {
             status_report_};
 }
 
+void MsgParser::getCanSignal(PlotCanMsg& can_data)
+{
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    auto it = can_frames_.find(can_data.ID);
+    if (it == can_frames_.end()) {
+        // std::cout << "\033[33m !!!没有对应的CAN ID!!!\33[0m" << std::endl;
+        std::cout << "\033[33m !!!没有对应的CAN ID:: \33[0m" << can_data.idToHexString() << std::endl;
+        return; // 没收到过
+    }
+
+    const uint8_t* data = it->second.data;
+    uint32_t result = 0;
+    int bits_copied = 0;
+
+    // 从 start_bit 开始，取 bit_len 位
+    for (int i = 0; i < can_data.bit_len; i++) {
+        int bit_pos = can_data.start_bit + i;
+        int byte_idx = bit_pos / 8;
+        int bit_idx = bit_pos % 8;
+        if (byte_idx >= 8) break;
+        uint8_t bit_val = (data[byte_idx] >> bit_idx) & 0x01;
+        result |= (bit_val << bits_copied);
+        bits_copied++;
+    }
+    can_data.value = result;
+}
 }
 } // namespace name

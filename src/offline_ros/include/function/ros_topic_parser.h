@@ -223,6 +223,45 @@ struct RecordData {
     }
 };
 
+// 用来保存一帧 CAN 的原始数据
+struct CanFrame
+{
+    uint64_t timestamp;  // 可选
+    uint8_t data[8] = {0};
+};
+
+struct PlotCanMsg {
+    uint32_t ID;
+    int start_bit;
+    int bit_len;
+    int value;
+
+    PlotCanMsg() 
+        : ID(0), start_bit(0), bit_len(0), value(0) 
+    {}
+
+    PlotCanMsg(uint32_t id, int s_bit, int b_len, int val)
+        : ID(id), 
+          start_bit(s_bit), 
+          bit_len(b_len), 
+          value(val) 
+    {}
+
+    std::string idToHexString() const {
+        std::stringstream ss;
+        ss << "0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << ID;
+        return ss.str();
+    }
+
+    std::string getKey() const {
+        std::stringstream ss;
+        ss << "0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << ID;
+        ss << std::dec << std::setfill(' ');
+        ss << ": " << start_bit << ": " << bit_len;
+        return ss.str();
+    }
+};
+
 class MsgParser {
     public:
         MsgParser(int argc, char *argv[]);
@@ -232,12 +271,14 @@ class MsgParser {
     public:
         std::shared_ptr<ComputeData> getVehicleData();
         HmiData getHmiData();
+        void getCanSignal(PlotCanMsg& can_data);
 
     private:
         void dbw_callback(const std_msgs::String::ConstPtr& msg);
         void ctrl_callback(const std_msgs::String::ConstPtr& msg);
         void watchdog_callback(const std_msgs::String::ConstPtr& msg);
         void statusReport_callback(const std_msgs::String::ConstPtr& msg);
+        void can_callback(const std_msgs::String::ConstPtr& msg);
         void writeToCSV(const long long timestamp, const std::vector<float>& data);
         void updateHmiData(const control::DbwReports& dbw_report);
         void writeFrameToFile(const ProtoRecordData::FrameData& frame);
@@ -251,6 +292,7 @@ class MsgParser {
         ros::Subscriber ctrl_sub_;
         ros::Subscriber watchdog_sub_;
         ros::Subscriber status_report_sub_;
+        ros::Subscriber can_sub_;
         std::ofstream csv_file_;
         std::string csv_file_path_;
         std::mutex data_mutex_;
@@ -268,6 +310,7 @@ class MsgParser {
         ButtonAndSwitch button_switch_;
         Watchdog watchdog_state_;
         StatusReport status_report_;
+        std::map<uint32_t, CanFrame> can_frames_;
         
     private:  // 后处理数据
         float swa_dot_ = 0.0;
