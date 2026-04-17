@@ -234,17 +234,18 @@ struct PlotCanMsg {
     uint32_t ID;
     int start_bit;
     int bit_len;
+    std::string signal;
     int value;
 
     PlotCanMsg() 
-        : ID(0), start_bit(0), bit_len(0), value(0) 
+        : ID(0), start_bit(0), bit_len(0), value(0), signal("")
     {}
 
-    PlotCanMsg(uint32_t id, int s_bit, int b_len, int val)
+    PlotCanMsg(uint32_t id, int s_bit, int b_len, const std::string& sg="")
         : ID(id), 
           start_bit(s_bit), 
-          bit_len(b_len), 
-          value(val) 
+          bit_len(b_len),
+          signal(sg)
     {}
 
     std::string idToHexString() const {
@@ -257,7 +258,7 @@ struct PlotCanMsg {
         std::stringstream ss;
         ss << "0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << ID;
         ss << std::dec << std::setfill(' ');
-        ss << ": " << start_bit << ": " << bit_len;
+        ss << ": " << start_bit << ": " << bit_len << "->" << signal;
         return ss.str();
     }
 };
