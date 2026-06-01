@@ -1,6 +1,8 @@
 #include "function/ros_topic_parser.h"
 #include <ros/package.h>
 #include <tool_box/math_tools.h>
+#include <iomanip>
+#include <sstream>
 
 namespace func {
 namespace msg_parser {
@@ -53,7 +55,9 @@ MsgParser::MsgParser(int argc, char *argv[]) {
     watchdog_sub_ = nh_.subscribe("/watchdog/current_state",1000, &MsgParser::watchdog_callback, this);
     status_report_sub_ = nh_.subscribe("/vehicle/status_report",1000, &MsgParser::statusReport_callback, this);
     can_sub_ = nh_.subscribe("/vehicle/dbw_all_can",1000, &MsgParser::can_callback, this);
+    last_can_miss_log_time_ = ros::Time(0);
     ROS_INFO("DBW Reports listener started. Saving data to: %s", csv_file_path_.c_str());
+    ROS_INFO("CAN listener subscribed to /vehicle/dbw_all_can");
 }
 
 MsgParser::MsgParser() {
@@ -298,18 +302,65 @@ void MsgParser::statusReport_callback(const std_msgs::String::ConstPtr& msg)
     }
 }
 
+uint32_t MsgParser::normalizeCanId(uint32_t raw_id) {
+    // Strip SocketCAN extended-frame flag (bit 31); DBC IDs use 29-bit form e.g. 0x18F0A1ED
+    return raw_id & 0x1FFFFFFFu;
+}
+
+void MsgParser::logCachedCanIdsUnlocked(const char* reason) const {
+    if (can_frames_.empty()) {
+        ROS_WARN("[CAN] %s: cache is empty (no frames received yet on /vehicle/dbw_all_can)", reason);
+        return;
+    }
+    std::ostringstream ss;
+    bool first = true;
+    for (const auto& kv : can_frames_) {
+        if (!first) {
+            ss << ", ";
+        }
+        ss << "0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << kv.first;
+        first = false;
+    }
+    ROS_INFO("[CAN] %s: %zu ID(s) in cache -> %s", reason, can_frames_.size(), ss.str().c_str());
+}
+
 void MsgParser::can_callback(const std_msgs::String::ConstPtr& msg){
     std::lock_guard<std::mutex> lock(data_mutex_);
     control::CanFDList can_pb;
-    can_pb.ParseFromString(msg->data);
+    if (!can_pb.ParseFromString(msg->data)) {
+        ROS_WARN_THROTTLE(5.0, "[CAN] Failed to parse CanFDList on /vehicle/dbw_all_can");
+        return;
+    }
+    const int batch_size = can_pb.canfd_list_size();
+    if (!can_callback_ever_received_) {
+        can_callback_ever_received_ = true;
+        ROS_INFO("[CAN] First message on /vehicle/dbw_all_can (%d frame(s) in batch)", batch_size);
+    }
+    ++can_callback_msg_count_;
     for (const auto& canfd : can_pb.canfd_list())
     {
-        uint32_t can_id = canfd.can_id();
+        const uint32_t raw_id = canfd.can_id();
+        const uint32_t can_id = normalizeCanId(raw_id);
         const std::string& data_str = canfd.data();
         const uint8_t* data = (const uint8_t*)data_str.data();
         CanFrame frame;
         memcpy(frame.data, data, std::min((size_t)8, data_str.size()));
         can_frames_[can_id] = frame;
+        if (seen_can_ids_.insert(can_id).second) {
+            if (raw_id != can_id) {
+                ROS_INFO("[CAN] New ID %s (raw %s), unique count=%zu",
+                         PlotCanMsg(can_id, 0, 0).idToHexString().c_str(),
+                         PlotCanMsg(raw_id, 0, 0).idToHexString().c_str(),
+                         seen_can_ids_.size());
+            } else {
+                ROS_INFO("[CAN] New ID %s, unique count=%zu",
+                         PlotCanMsg(can_id, 0, 0).idToHexString().c_str(),
+                         seen_can_ids_.size());
+            }
+        }
+    }
+    if (can_callback_msg_count_ % 200 == 0) {
+        logCachedCanIdsUnlocked("periodic summary (every 200 CAN messages)");
     }
 }
 
@@ -368,10 +419,25 @@ HmiData MsgParser::getHmiData() {
 void MsgParser::getCanSignal(PlotCanMsg& can_data)
 {
     std::lock_guard<std::mutex> lock(data_mutex_);
-    auto it = can_frames_.find(can_data.ID);
+    const uint32_t lookup_id = normalizeCanId(can_data.ID);
+    auto it = can_frames_.find(lookup_id);
     if (it == can_frames_.end()) {
-        // std::cout << "\033[33m !!!没有对应的CAN ID!!!\33[0m" << std::endl;
-        std::cout << "\033[33m !!!没有对应的CAN ID:: \33[0m" << can_data.idToHexString() << std::endl;
+        const ros::Time now = ros::Time::now();
+        if (!can_callback_ever_received_) {
+            ROS_WARN_THROTTLE(5.0,
+                "[CAN] No /vehicle/dbw_all_can data yet; looking for %s",
+                can_data.idToHexString().c_str());
+        } else if (last_can_miss_log_time_.isZero() ||
+                   (now - last_can_miss_log_time_).toSec() >= 5.0) {
+            last_can_miss_log_time_ = now;
+            ROS_WARN("[CAN] Lookup miss for %s (normalized %s)",
+                     can_data.idToHexString().c_str(),
+                     PlotCanMsg(lookup_id, 0, 0).idToHexString().c_str());
+            logCachedCanIdsUnlocked("IDs currently in cache");
+        }
+        std::cout << "\033[33m !!!没有对应的CAN ID:: \33[0m" << can_data.idToHexString()
+                  << " (cache has " << can_frames_.size() << " ID(s), see ROS_INFO above)"
+                  << std::endl;
         return; // 没收到过
     }
 

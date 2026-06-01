@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
   while (ros::ok()) {
     ros::spinOnce();
     vector<PlotCanMsg> plot_can_array;
-    PlotCanMsg plot_can01(0x18F0A1ED,0,16,"PlusPilot_char_display");
+    PlotCanMsg plot_can01(0x18F0A1ED,40,4,"PlusPilot_char_display");
     msg_parser.getCanSignal(plot_can01);
     plot_can_array.push_back(plot_can01);
     // PlotCanMsg plot_can02(0x18F0A1ED,36,2,"lateral_function_status");

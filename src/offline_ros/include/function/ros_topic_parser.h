@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <map>
+#include <set>
 
 // 包含已编译的protobuf头文件
 #include "plusai_common_proto/control/dbw_reports.pb.h"
@@ -286,7 +287,9 @@ class MsgParser {
         void updataFrameData(const control::DbwReports& dbw_report);
         void updataCsvData(const control::DbwReports& dbw_report);
         void updateLocalTime(const long long& ts_msec);
-    
+        static uint32_t normalizeCanId(uint32_t raw_id);
+        void logCachedCanIdsUnlocked(const char* reason) const;
+
     private:
         ros::NodeHandle nh_;
         ros::Subscriber dbw_sub_;
@@ -312,7 +315,11 @@ class MsgParser {
         Watchdog watchdog_state_;
         StatusReport status_report_;
         std::map<uint32_t, CanFrame> can_frames_;
-        
+        std::set<uint32_t> seen_can_ids_;
+        bool can_callback_ever_received_ = false;
+        uint32_t can_callback_msg_count_ = 0;
+        ros::Time last_can_miss_log_time_;
+
     private:  // 后处理数据
         float swa_dot_ = 0.0;
         float swt_filtered_ = 0.0;

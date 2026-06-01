@@ -5,6 +5,7 @@ build/
 devel/
 install/
 .log/
+bags/
 
 # Python
 *.pyc
