@@ -222,7 +222,7 @@ void MsgParser::updateHmiData(const control::DbwReports& dbw_report) {
     button_switch_.buttons.at("acc_decrease") = dbw_report.hmi_report().acc_set_dec_button_pressed();
     button_switch_.switches.at("acc_switch") = dbw_report.hmi_report().acc_switch();
     button_switch_.switches.at("pilot_switch") = dbw_report.hmi_report().pilot_switch();
-    button_switch_.switches.at("noa_switch") = dbw_report.hmi_report().noa_switch_button_pressed();
+    button_switch_.switches.at("noa_switch") = dbw_report.hmi_report().noa_soft_switch();
 }
 
 void MsgParser::ctrl_callback(const std_msgs::String::ConstPtr& msg)
