@@ -38,18 +38,18 @@ int main(int argc, char *argv[]) {
   while (ros::ok()) {
     ros::spinOnce();
     vector<PlotCanMsg> plot_can_array;
-    PlotCanMsg plot_can01(0x18F0A1ED,40,4,"PlusPilot_char_display");
+    PlotCanMsg plot_can01(0x19FF6217,0,2,"RightYellowLEDStatus");
     msg_parser.getCanSignal(plot_can01);
     plot_can_array.push_back(plot_can01);
-    // PlotCanMsg plot_can02(0x18F0A1ED,36,2,"lateral_function_status");
-    // msg_parser.getCanSignal(plot_can02);
-    // plot_can_array.push_back(plot_can02);
-    // PlotCanMsg plot_can03(0x18F0A1ED,40,4,"NOA_status");
-    // msg_parser.getCanSignal(plot_can03);
-    // plot_can_array.push_back(plot_can03);
-    // PlotCanMsg plot_can04(0x18FF28ED,0,8,"MessageDisplayRequest");
-    // msg_parser.getCanSignal(plot_can04);
-    // plot_can_array.push_back(plot_can04);
+    PlotCanMsg plot_can02(0x19FF6217,2,2,"LeftYellowLEDStatus");
+    msg_parser.getCanSignal(plot_can02);
+    plot_can_array.push_back(plot_can02);
+    PlotCanMsg plot_can03(0x19FF6217,4,2,"RightRedLEDStatus");
+    msg_parser.getCanSignal(plot_can03);
+    plot_can_array.push_back(plot_can03);
+    PlotCanMsg plot_can04(0x19FF6217,6,2,"LeftRedLEDStatus");
+    msg_parser.getCanSignal(plot_can04);
+    plot_can_array.push_back(plot_can04);
     // PlotCanMsg plot_can05(0x0CFDCC21,8,4,"TurnSignalSw");
     // msg_parser.getCanSignal(plot_can05);
     // plot_can_array.push_back(plot_can05);
